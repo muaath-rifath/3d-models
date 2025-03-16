@@ -314,28 +314,33 @@ export default function MotionSensor() {
     sensorNode.add(domeGroup);
     
     // Create the hemisphere dome (half sphere) with reduced thickness
-    // Using TorusGeometry for a thinner shell instead of a solid sphere
     const domeRadius = 0.35;
     const domeThickness = 0.03; // Reduced thickness
     const domeSegments = 32;
     
-    // Outer dome shell
+    // Use a clip plane to ensure the dome doesn't protrude below the PCB
+    const localPlane = new THREE.Plane(new THREE.Vector3(0, -1, 0), 0);
+    const clipPlanes = [localPlane];
+    
+    // Outer dome shell with clip plane
     const domeOuterGeometry = new THREE.SphereGeometry(domeRadius, domeSegments, domeSegments, 0, Math.PI * 2, 0, Math.PI / 2);
     const domeMaterial = new THREE.MeshStandardMaterial({
       color: 0xffffff, // White color
       metalness: 0.2,
       roughness: 0.5,
-      side: THREE.DoubleSide // Render both sides
+      side: THREE.DoubleSide, // Render both sides
+      clippingPlanes: clipPlanes
     });
     const domeOuter = new THREE.Mesh(domeOuterGeometry, domeMaterial);
     domeOuter.castShadow = true;
     domeGroup.add(domeOuter);
     
-    // Inner dome shell (to create hollow effect)
+    // Inner dome shell with clip plane
     const domeInnerGeometry = new THREE.SphereGeometry(domeRadius - domeThickness, domeSegments, domeSegments, 0, Math.PI * 2, 0, Math.PI / 2);
     const domeInnerMaterial = new THREE.MeshStandardMaterial({
       color: 0xffffff, 
-      side: THREE.BackSide // Render inside
+      side: THREE.BackSide, // Render inside
+      clippingPlanes: clipPlanes
     });
     const domeInner = new THREE.Mesh(domeInnerGeometry, domeInnerMaterial);
     domeGroup.add(domeInner);
@@ -456,7 +461,8 @@ export default function MotionSensor() {
         color: darkMode ? 0x00ffaa : 0x00aa88,
         transparent: true,
         opacity: 0.05,
-        wireframe: true
+        wireframe: true,
+        clippingPlanes: clipPlanes
       });
       const field = new THREE.Mesh(fieldGeometry, fieldMaterial);
       field.rotation.x = Math.PI; // Point upward
@@ -466,6 +472,135 @@ export default function MotionSensor() {
     
     const detectionField = createDetectionField();
     domeGroup.add(detectionField);
+    
+    // Add components to the underside of the PCB for better appearance
+    const underComponents = new THREE.Group();
+    
+    // Create SMD components on bottom of PCB
+    const createSMDComponent = (x: number, z: number, width: number, length: number, color: number) => {
+      const smdGeometry = new THREE.BoxGeometry(width, 0.04, length);
+      const smdMaterial = new THREE.MeshStandardMaterial({
+        color: color,
+        metalness: 0.3,
+        roughness: 0.7
+      });
+      const smd = new THREE.Mesh(smdGeometry, smdMaterial);
+      smd.position.set(x, -0.07, z);
+      return smd;
+    };
+    
+    // Add various SMD components to bottom
+    underComponents.add(createSMDComponent(0.3, 0.4, 0.3, 0.2, 0x222222));   // IC
+    underComponents.add(createSMDComponent(-0.5, 0.3, 0.2, 0.1, 0x333333));  // Small IC
+    underComponents.add(createSMDComponent(0.6, -0.3, 0.1, 0.2, 0x222222));  // Voltage regulator
+    
+    // Add small SMD resistors and capacitors
+    for (let i = 0; i < 8; i++) {
+      const x = Math.random() * 1.4 - 0.7;
+      const z = Math.random() * 1.4 - 0.7;
+      // Skip adding component if it's near dome center
+      if (Math.sqrt(Math.pow(x + 0.4, 2) + Math.pow(z - 0.5, 2)) < 0.35) {
+        continue;
+      }
+      
+      // Random choice between resistor (rectangular) and capacitor (square)
+      if (Math.random() > 0.5) {
+        // Resistor (rectangular)
+        underComponents.add(createSMDComponent(x, z, 0.1, 0.05, 0x111111));
+      } else {
+        // Capacitor (square)
+        underComponents.add(createSMDComponent(x, z, 0.06, 0.06, 0x222222));
+      }
+    }
+    
+    // Add trace lines on bottom
+    const createBottomTrace = (x: number, z: number, width: number, length: number, rotation = 0) => {
+      const traceGeometry = new THREE.BoxGeometry(width, 0.01, length);
+      const traceMaterial = new THREE.MeshStandardMaterial({
+        color: 0xCFB53B, // Gold color
+        roughness: 0.2,
+        metalness: 0.8,
+        emissive: darkMode ? 0x332200 : 0x000000,
+        emissiveIntensity: darkMode ? 0.2 : 0
+      });
+      const trace = new THREE.Mesh(traceGeometry, traceMaterial);
+      trace.position.set(x, -0.05, z);
+      trace.rotation.y = rotation;
+      return trace;
+    };
+    
+    // Create grid pattern for bottom traces
+    for (let i = -0.6; i <= 0.6; i += 0.3) {
+      underComponents.add(createBottomTrace(i, 0, 0.03, 1.6, 0));
+      underComponents.add(createBottomTrace(0, i, 1.6, 0.03, 0));
+    }
+    
+    // Create JTAG debug connector
+    const debugConnectorGeometry = new THREE.BoxGeometry(0.4, 0.1, 0.1);
+    const debugConnectorMaterial = new THREE.MeshStandardMaterial({
+      color: 0x333333,
+      roughness: 0.5,
+      metalness: 0.5
+    });
+    const debugConnector = new THREE.Mesh(debugConnectorGeometry, debugConnectorMaterial);
+    debugConnector.position.set(0.6, -0.1, 0.6);
+    
+    // Add pins to the debug connector
+    for (let i = 0; i < 5; i++) {
+      const pinGeometry = new THREE.CylinderGeometry(0.01, 0.01, 0.06, 8);
+      const pinMaterial = new THREE.MeshStandardMaterial({
+        color: 0xCCCCCC,
+        metalness: 0.9,
+        roughness: 0.1
+      });
+      const pin = new THREE.Mesh(pinGeometry, pinMaterial);
+      pin.position.set((i - 2) * 0.08, 0, 0);
+      pin.rotation.x = Math.PI / 2;
+      debugConnector.add(pin);
+    }
+    
+    underComponents.add(debugConnector);
+    
+    // Add QR code or barcode on bottom
+    const createBarcode = () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 128;
+      canvas.height = 128;
+      const ctx = canvas.getContext('2d');
+      
+      if (ctx) {
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, 128, 128);
+        
+        // Draw barcode-like pattern
+        ctx.fillStyle = 'black';
+        for (let i = 0; i < 20; i++) {
+          if (Math.random() > 0.5) {
+            const x = i * 6 + 4;
+            const width = 4;
+            ctx.fillRect(x, 10, width, 108);
+          }
+        }
+        
+        const texture = new THREE.CanvasTexture(canvas);
+        const material = new THREE.MeshBasicMaterial({
+          map: texture
+        });
+        
+        const geometry = new THREE.PlaneGeometry(0.4, 0.15);
+        const barcode = new THREE.Mesh(geometry, material);
+        barcode.rotation.x = Math.PI;
+        barcode.position.set(-0.5, -0.051, -0.5);
+        return barcode;
+      }
+      
+      return null;
+    };
+    
+    const barcode = createBarcode();
+    if (barcode) underComponents.add(barcode);
+    
+    sensorNode.add(underComponents);
     
     // Add signal emitter effect around antenna (for visualization)
     const signalGeometry = new THREE.RingGeometry(0.1, 0.12, 16);
