@@ -28,11 +28,10 @@ export default function MotionSensor() {
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    currentMount.appendChild(renderer.domElement);
-    
     // Enable clipping for the entire scene
     renderer.localClippingEnabled = true;
-
+    currentMount.appendChild(renderer.domElement);
+    
     // Add orbit controls
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
@@ -316,29 +315,42 @@ export default function MotionSensor() {
     domeGroup.position.set(-0.4, 0.1, 0.5); // Positioned away from antenna
     sensorNode.add(domeGroup);
     
-    // Define clipping plane that aligns perfectly with the top of the PCB
-    // This ensures nothing protrudes below the PCB
-    const clippingPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0.05);
+    // Define clipping plane that cuts off anything below the PCB surface
+    const clippingPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
     
     // Create the hemisphere dome with reduced thickness
     const domeRadius = 0.35;
     const domeThickness = 0.03; // Reduced thickness
     const domeSegments = 32;
     
-    // Outer dome shell with proper clipping
+    // Create opaque plate at the bottom of the dome to completely seal it
+    // This plate blocks any view of the underside of the dome
+    const basePlateGeometry = new THREE.CircleGeometry(domeRadius, 32);
+    const basePlateMaterial = new THREE.MeshStandardMaterial({
+      color: 0x006633, // Match PCB color exactly
+      metalness: 0.3,
+      roughness: 0.7,
+      side: THREE.DoubleSide
+    });
+    const basePlate = new THREE.Mesh(basePlateGeometry, basePlateMaterial);
+    basePlate.rotation.x = Math.PI / 2;
+    basePlate.position.y = 0;
+    domeGroup.add(basePlate);
+    
+    // Outer dome shell (with clipping)
     const domeOuterGeometry = new THREE.SphereGeometry(domeRadius, domeSegments, domeSegments, 0, Math.PI * 2, 0, Math.PI / 2);
     const domeMaterial = new THREE.MeshStandardMaterial({
       color: 0xffffff, // White color
       metalness: 0.2,
       roughness: 0.5,
-      side: THREE.DoubleSide, // Render both sides
+      side: THREE.FrontSide, // Only render front face
       clippingPlanes: [clippingPlane]
     });
     const domeOuter = new THREE.Mesh(domeOuterGeometry, domeMaterial);
     domeOuter.castShadow = true;
     domeGroup.add(domeOuter);
     
-    // Inner dome shell with proper clipping
+    // Inner dome shell (with clipping)
     const domeInnerGeometry = new THREE.SphereGeometry(domeRadius - domeThickness, domeSegments, domeSegments, 0, Math.PI * 2, 0, Math.PI / 2);
     const domeInnerMaterial = new THREE.MeshStandardMaterial({
       color: 0xffffff, 
@@ -457,9 +469,11 @@ export default function MotionSensor() {
     // Add the whole sensor to the scene
     scene.add(sensorNode);
     
-    // Add visual detection conical field effect ABOVE the dome with proper clipping
+    // Add visual detection conical field effect ABOVE the dome (with clipping)
     const createDetectionField = () => {
-      const fieldGeometry = new THREE.ConeGeometry(0.8, 1.0, 32, 1, true);
+      // Use a specialized geometry to ensure we only have the top portion of the cone
+      // Start y position higher to prevent bottom from reaching below the PCB
+      const fieldGeometry = new THREE.ConeGeometry(0.8, 0.8, 32, 1, true);
       const fieldMaterial = new THREE.MeshBasicMaterial({
         color: darkMode ? 0x00ffaa : 0x00aa88,
         transparent: true,
@@ -469,7 +483,7 @@ export default function MotionSensor() {
       });
       const field = new THREE.Mesh(fieldGeometry, fieldMaterial);
       field.rotation.x = Math.PI; // Point upward
-      field.position.y = 0.35; // Position above the dome
+      field.position.y = 0.5; // Position higher above the dome
       return field;
     };
     
