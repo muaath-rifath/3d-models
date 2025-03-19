@@ -448,8 +448,19 @@ export default function AirQualitySensor() {
 
     // Wall mounting bracket
     const bracketGroup = new THREE.Group();
-    bracketGroup.position.set(0, -0.3, 0);
+    bracketGroup.position.set(0, -0.8, 0); // Lowered position further down
     sensorNode.add(bracketGroup);
+
+    // Connection stem between housing and bracket
+    const stemGeometry = new THREE.CylinderGeometry(0.15, 0.15, 1.2, 16); // Increased height to 1.2
+    const stemMaterial = new THREE.MeshStandardMaterial({
+      color: darkMode ? 0x006633 : 0xc8e6c9, // Match housing color
+      roughness: 0.7,
+      metalness: 0.3
+    });
+    const stem = new THREE.Mesh(stemGeometry, stemMaterial);
+    stem.position.y = -0.4; // Adjusted position to accommodate increased length
+    sensorNode.add(stem);
 
     // Bracket base
     const bracketBaseGeometry = new THREE.BoxGeometry(1.5, 0.1, 1.5);
@@ -459,7 +470,7 @@ export default function AirQualitySensor() {
       metalness: 0.3
     });
     const bracketBase = new THREE.Mesh(bracketBaseGeometry, bracketBaseMaterial);
-    bracketBase.position.y = -0.05;
+    bracketBase.position.y = -0.2; // Lowered from -0.05 to -0.2 to make stem pierce through
     bracketGroup.add(bracketBase);
 
     // Mounting holes
