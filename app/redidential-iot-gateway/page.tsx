@@ -75,11 +75,11 @@ export default function IoTGateway() {
     });
     
     const lightRingMaterial = new THREE.MeshStandardMaterial({
-      color: isDarkMode ? 0x44ff66 : 0x006644,
+      color: isDarkMode ? 0x44ff66 : 0x22ee55, // Brightened light mode color
       roughness: 0.1,
       metalness: 0.9,
-      emissive: isDarkMode ? 0x44ff66 : 0x006644,
-      emissiveIntensity: isDarkMode ? 0.8 : 0.4
+      emissive: isDarkMode ? 0x44ff66 : 0x22ee55, // Brightened light mode color
+      emissiveIntensity: isDarkMode ? 0.8 : 0.7 // Increased light mode intensity
     });
     
     const ventilationMaterial = new THREE.MeshStandardMaterial({
