@@ -510,129 +510,174 @@ export default function IoTGateway() {
     });
     gatewayGroup.add(antennas);
     
-    // Status display content with enhanced dynamic information and improved text visibility
+    // Remove any existing display lights that might cause glare
+    const displayLights = gatewayGroup.children.filter(child => 
+      child instanceof THREE.PointLight && 
+      Math.abs(child.position.y - 2) < 0.5 && 
+      Math.abs(child.position.z - radius) < 3
+    );
+    
+    displayLights.forEach(light => {
+      gatewayGroup.remove(light);
+    });
+    
+    // No new point light for display - use emissive material only
+    
+    // Status display content with AMOLED-like glowing text
     const createDisplayContent = () => {
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
-      // Increase resolution for sharper text
-      canvas.width = 1024; 
-      canvas.height = 512;
+      canvas.width = 2048;
+      canvas.height = 1024;
       
       if (context) {
-        // Clear canvas
-        context.clearRect(0, 0, canvas.width, canvas.height);
-        
-        // Higher contrast background based on theme
-        const gradient = context.createLinearGradient(0, 0, 0, canvas.height);
-        if (isDarkMode) {
-          gradient.addColorStop(0, '#000a08');
-          gradient.addColorStop(1, '#000504');
-        } else {
-          gradient.addColorStop(0, '#001a12');
-          gradient.addColorStop(1, '#00100a');
-        }
-        context.fillStyle = gradient;
+        // Pure black background for AMOLED-like effect
+        context.fillStyle = '#000000';
         context.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Stronger border for better definition
-        context.strokeStyle = isDarkMode ? '#00ff88' : '#00dd66';
-        context.lineWidth = 12;
-        context.strokeRect(8, 8, canvas.width - 16, canvas.height - 16);
+        // Disable any previous composite operations
+        context.globalCompositeOperation = 'source-over';
         
-        // Header section with more contrast
-        context.fillStyle = isDarkMode ? '#000504' : '#000a06'; 
-        context.fillRect(20, 20, canvas.width - 40, 90);
+        // Function to draw glowing text with AMOLED-like appearance
+        const drawAmoledText = (
+          text: string, 
+          x: number, 
+          y: number, 
+          color: string, 
+          fontSize: string = '60px', 
+          align: CanvasTextAlign = 'left'
+        ) => {
+          context.textAlign = align;
+          context.font = `bold ${fontSize} Arial`;
+          
+          // Outer glow (very subtle)
+          context.fillStyle = color;
+          context.globalAlpha = 0.2;
+          for (let i = 6; i >= 3; i--) {
+            context.shadowColor = color;
+            context.shadowBlur = i * 5;
+            context.shadowOffsetX = 0;
+            context.shadowOffsetY = 0;
+            context.fillText(text, x, y);
+          }
+          
+          // Inner glow (brighter)
+          context.globalAlpha = 0.6;
+          for (let i = 3; i >= 1; i--) {
+            context.shadowColor = color;
+            context.shadowBlur = i * 2;
+            context.fillText(text, x, y);
+          }
+          
+          // Core text (brightest)
+          context.globalAlpha = 1.0;
+          context.shadowBlur = 0;
+          context.fillStyle = color;
+          context.fillText(text, x, y);
+          
+          // Highlight (center of text)
+          context.fillStyle = '#ffffff';
+          context.globalAlpha = 0.7;
+          context.font = `bold ${parseInt(fontSize) * 0.98}px Arial`;
+          context.fillText(text, x, y);
+          
+          // Reset
+          context.shadowColor = 'transparent';
+          context.shadowBlur = 0;
+          context.globalAlpha = 1.0;
+        };
         
-        // Header text - extremely high contrast for both themes
-        context.fillStyle = isDarkMode ? '#ffff00' : '#ffff00'; // Yellow for both themes for maximum visibility
-        context.font = 'bold 56px Arial';
-        context.textAlign = 'center';
-        context.textBaseline = 'middle';
+        // Title with strong AMOLED glow
+        drawAmoledText(
+          'SMART HOME IoT GATEWAY', 
+          canvas.width / 2, 
+          90, 
+          '#00ff88', 
+          '72px', 
+          'center'
+        );
         
-        // Strong text shadow for better legibility
-        context.shadowColor = '#000000';
-        context.shadowBlur = 4;
-        context.shadowOffsetX = 2;
-        context.shadowOffsetY = 2;
+        // Status indicators with different colors
+        drawAmoledText('Status:', 60, 200, '#ff8800');
+        drawAmoledText('ONLINE', canvas.width - 60, 200, '#00ffff', '60px', 'right');
         
-        context.fillText('SMART HOME IoT GATEWAY', canvas.width / 2, 65);
+        drawAmoledText('Network:', 60, 300, '#ff8800');
+        drawAmoledText('WiFi + Ethernet', canvas.width - 60, 300, '#00ffff', '60px', 'right');
         
-        // Reset shadow for cleaner text elsewhere
-        context.shadowOffsetX = 1;
-        context.shadowOffsetY = 1;
-        context.shadowBlur = 2;
+        drawAmoledText('Devices:', 60, 400, '#ff8800');
+        drawAmoledText('12 Connected', canvas.width - 60, 400, '#00ffff', '60px', 'right');
         
-        // Information labels - extremely bright, no emissive color dilution
-        context.font = 'bold 48px Arial';
-        context.textAlign = 'left';
-        context.fillStyle = isDarkMode ? '#ff9900' : '#ff6600'; // Orange for high contrast
-        context.fillText('Status:', 40, 180);
-        context.fillText('Network:', 40, 260);
-        context.fillText('Devices:', 40, 340);
-        context.fillText('System:', 40, 420);
+        drawAmoledText('System:', 60, 500, '#ff8800');
+        drawAmoledText('60%', canvas.width - 60, 500, '#00ffff', '60px', 'right');
         
-        // Dynamic values - pure white with slight shadow for maximum contrast
-        context.fillStyle = '#ffffff'; // White for both themes
-        context.font = 'bold 48px Arial';
-        context.textAlign = 'right';
-        context.fillText('ONLINE', canvas.width - 40, 180);
-        context.fillText('WiFi + Ethernet', canvas.width - 40, 260);
-        context.fillText('12 Connected', canvas.width - 40, 340);
+        // Progress bar with AMOLED glow
+        const barWidth = 400;
+        const barHeight = 36;
+        const barX = canvas.width - barWidth - 280;
+        const barY = 482;
         
-        // Load bar with extreme contrast
-        const loadPercent = 60;
-        context.fillText(`${loadPercent}%`, canvas.width - 40, 420);
-        
-        // Draw progress bar with highly visible colors
-        const barWidth = 300;
-        const barHeight = 30;
-        const barX = canvas.width - barWidth - 260;
-        const barY = 405;
-        
-        // Bar background - true black
-        context.fillStyle = '#000000';
-        context.fillRect(barX, barY, barWidth, barHeight);
-        
-        // Bar border - pure white for contrast
-        context.strokeStyle = '#ffffff';
+        // Bar container (dark outline)
+        context.strokeStyle = '#333333';
         context.lineWidth = 2;
         context.strokeRect(barX, barY, barWidth, barHeight);
         
-        // Bar progress - high visibility color
-        context.fillStyle = isDarkMode ? '#ff3300' : '#ff3300'; // Bright red-orange
+        // Progress value with glow
+        const loadPercent = 60;
+        
+        // Bar glow effect
+        context.shadowColor = '#ff6600';
+        context.shadowBlur = 15;
+        context.shadowOffsetX = 0;
+        context.shadowOffsetY = 0;
+        context.fillStyle = '#ff6600';
         context.fillRect(barX, barY, barWidth * (loadPercent / 100), barHeight);
         
-        // Time display
+        // Inner highlight
+        context.shadowBlur = 0;
+        context.globalAlpha = 0.7;
+        context.fillStyle = '#ffaa00';
+        context.fillRect(
+          barX + 2, 
+          barY + 2, 
+          (barWidth * (loadPercent / 100)) - 4, 
+          barHeight / 2 - 2
+        );
+        context.globalAlpha = 1.0;
+        
+        // Time display with green glow
         const now = new Date();
         const timeString = now.toLocaleTimeString();
-        context.fillStyle = '#ffffff';
-        context.font = 'bold 36px Arial';
-        context.textAlign = 'center';
-        context.fillText(timeString, canvas.width / 2, canvas.height - 30);
+        drawAmoledText(
+          timeString, 
+          canvas.width / 2, 
+          canvas.height - 60, 
+          '#00ff88', 
+          '48px', 
+          'center'
+        );
         
-        // Apply texture to display with anisotropic filtering for sharper text
+        // Apply texture with proper filtering
         const texture = new THREE.CanvasTexture(canvas);
         texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
         texture.minFilter = THREE.LinearFilter;
         texture.magFilter = THREE.LinearFilter;
         
-        // Update the display material with new texture and stronger emission
+        // Use the material itself for text glow, not external lights
         display.material = new THREE.MeshStandardMaterial({
           map: texture,
-          emissive: isDarkMode ? 0x00ff88 : 0x00dd66,
-          emissiveIntensity: isDarkMode ? 1.0 : 0.6,
-          roughness: 0.2,
-          metalness: 0.8
+          emissive: 0x000000,
+          emissiveMap: texture,
+          emissiveIntensity: isDarkMode ? 0.9 : 0.7, // Reduced intensity
+          roughness: 0.4, // Increased roughness to reduce reflections
+          metalness: 0.6  // Reduced metalness to minimize reflective glare
         });
       }
     };
     
     createDisplayContent();
     
-    // Add point light near display for extra glow effect
-    const displayLight = new THREE.PointLight(isDarkMode ? 0x00ff88 : 0x00dd66, 1.2, 10);
-    displayLight.position.set(0, 2, radius + 1);
-    gatewayGroup.add(displayLight);
+    // The display will use only its own emissive material properties for glow
+    // No additional light source needed - this prevents the moving glare effect
     
     // Update display periodically to show real-time data
     const displayUpdateInterval = setInterval(createDisplayContent, 1000);
