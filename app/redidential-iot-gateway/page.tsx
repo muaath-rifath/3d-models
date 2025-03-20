@@ -595,8 +595,8 @@ export default function IoTGateway() {
             actualX = x - textWidth;
           }
           
-          // Use the exact same color as lightRingMaterial
-          const glowColor = isDarkMode ? '#44ff66' : '#006644';
+          // Use brighter colors in both modes - the light mode color was too dark to glow
+          const glowColor = isDarkMode ? '#44ff66' : '#22ee55'; // Brightened light mode color
           
           // Draw dots on both canvases, but with different properties
           
@@ -758,9 +758,9 @@ export default function IoTGateway() {
           color: 0x000000,          // Pure black base color
           roughness: 0.1,
           metalness: 0.9,
-          emissive: isDarkMode ? 0x44ff66 : 0x006644,
+          emissive: isDarkMode ? 0x44ff66 : 0x22ee55, // Brightened light mode color
           emissiveMap: emissiveTexture,
-          emissiveIntensity: isDarkMode ? 0.8 : 0.4
+          emissiveIntensity: isDarkMode ? 0.8 : 0.7   // Increased light mode intensity
         });
       }
     };
