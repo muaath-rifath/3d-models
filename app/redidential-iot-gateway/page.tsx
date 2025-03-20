@@ -9,6 +9,9 @@ export default function IoTGateway() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   
   useEffect(() => {
+    // Define this variable at the top of the useEffect function
+    let displayUpdateInterval: NodeJS.Timeout | undefined;
+
     // Scene, camera, and renderer setup
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(isDarkMode ? 0x0a1a20 : 0xf0f8ff);
@@ -523,7 +526,7 @@ export default function IoTGateway() {
     
     // No new point light for display - use emissive material only
     
-    // Status display content with AMOLED-like glowing text
+    // Status display content with clearly visible glowing text
     const createDisplayContent = () => {
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
@@ -531,156 +534,246 @@ export default function IoTGateway() {
       canvas.height = 1024;
       
       if (context) {
-        // Pure black background for AMOLED-like effect
+        // Pure black background for AMOLED effect
         context.fillStyle = '#000000';
         context.fillRect(0, 0, canvas.width, canvas.height);
         
-        // Disable any previous composite operations
-        context.globalCompositeOperation = 'source-over';
+        // Create a separate canvas for the emissive map
+        const emissiveCanvas = document.createElement('canvas');
+        const emissiveContext = emissiveCanvas.getContext('2d');
+        if (!emissiveContext) return;
         
-        // Function to draw glowing text with AMOLED-like appearance
-        const drawAmoledText = (
+        emissiveCanvas.width = canvas.width;
+        emissiveCanvas.height = canvas.height;
+        
+        // Black background for emissive canvas (non-emissive)
+        emissiveContext.fillStyle = '#000000';
+        emissiveContext.fillRect(0, 0, emissiveCanvas.width, emissiveCanvas.height);
+        
+        // Function to draw dotted text that mimics AMOLED pixels with glow
+        const drawDottedText = (
           text: string, 
           x: number, 
           y: number, 
-          color: string, 
           fontSize: string = '60px', 
           align: CanvasTextAlign = 'left'
         ) => {
-          context.textAlign = align;
-          context.font = `bold ${fontSize} Arial`;
+          // First render text to an offscreen canvas to get pixel data
+          const tempCanvas = document.createElement('canvas');
+          const tempContext = tempCanvas.getContext('2d');
           
-          // Outer glow (very subtle)
-          context.fillStyle = color;
-          context.globalAlpha = 0.2;
-          for (let i = 6; i >= 3; i--) {
-            context.shadowColor = color;
-            context.shadowBlur = i * 5;
-            context.shadowOffsetX = 0;
-            context.shadowOffsetY = 0;
-            context.fillText(text, x, y);
+          if (!tempContext) return;
+          
+          // Define dot size and spacing before using them
+          const dotSize = 3; // Size of each "pixel" dot
+          const dotSpacing = 5; // Space between dots - moved up before use
+          
+          // Size the temp canvas based on text size
+          const size = parseInt(fontSize);
+          const textWidth = size * text.length * 0.6;
+          const textHeight = size * 1.2;
+          tempCanvas.width = textWidth;
+          tempCanvas.height = textHeight;
+          
+          // Draw the text on the temp canvas
+          tempContext.textAlign = 'left';
+          tempContext.textBaseline = 'top';
+          tempContext.font = `bold ${fontSize} Arial`;
+          tempContext.fillStyle = '#ffffff';
+          tempContext.fillText(text, 0, 0);
+          
+          // Get pixel data
+          const imageData = tempContext.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+          const pixels = imageData.data;
+          
+          // Calculate actual position based on alignment
+          let actualX = x;
+          if (align === 'center') {
+            actualX = x - textWidth / 2;
+          } else if (align === 'right') {
+            actualX = x - textWidth;
           }
           
-          // Inner glow (brighter)
-          context.globalAlpha = 0.6;
-          for (let i = 3; i >= 1; i--) {
-            context.shadowColor = color;
-            context.shadowBlur = i * 2;
-            context.fillText(text, x, y);
-          }
+          // Use the exact same color as lightRingMaterial
+          const glowColor = isDarkMode ? '#44ff66' : '#006644';
           
-          // Core text (brightest)
+          // Draw dots on both canvases, but with different properties
+          
+          // First pass: Draw white dots on main canvas for diffuse texture
+          context.globalCompositeOperation = 'source-over';
           context.globalAlpha = 1.0;
-          context.shadowBlur = 0;
-          context.fillStyle = color;
-          context.fillText(text, x, y);
           
-          // Highlight (center of text)
-          context.fillStyle = '#ffffff';
-          context.globalAlpha = 0.7;
-          context.font = `bold ${parseInt(fontSize) * 0.98}px Arial`;
-          context.fillText(text, x, y);
+          for (let py = 0; py < tempCanvas.height; py += dotSpacing) {
+            for (let px = 0; px < tempCanvas.width; px += dotSpacing) {
+              const i = (py * tempCanvas.width + px) * 4;
+              if (pixels[i+3] > 50) {
+                const brightness = pixels[i] / 255;
+                if (brightness > 0.2) {
+                  // Draw on main canvas (white dots for diffuse)
+                  context.fillStyle = '#ffffff';
+                  context.beginPath();
+                  context.arc(
+                    actualX + px, 
+                    y - textHeight/2 + py, 
+                    dotSize, 
+                    0, 
+                    Math.PI * 2
+                  );
+                  context.fill();
+                }
+              }
+            }
+          }
           
-          // Reset
-          context.shadowColor = 'transparent';
-          context.shadowBlur = 0;
+          // Second pass: Draw glowing dots on emissive canvas
+          emissiveContext.globalCompositeOperation = 'lighter';
+          
+          // Glow layer
+          for (let py = 0; py < tempCanvas.height; py += dotSpacing) {
+            for (let px = 0; px < tempCanvas.width; px += dotSpacing) {
+              const i = (py * tempCanvas.width + px) * 4;
+              if (pixels[i+3] > 50) {
+                const brightness = pixels[i] / 255;
+                if (brightness > 0.2) {
+                  // Draw glow on emissive canvas
+                  emissiveContext.globalAlpha = 0.3 * brightness;
+                  emissiveContext.fillStyle = glowColor;
+                  emissiveContext.beginPath();
+                  emissiveContext.arc(
+                    actualX + px, 
+                    y - textHeight/2 + py, 
+                    dotSize * 1.8,
+                    0, 
+                    Math.PI * 2
+                  );
+                  emissiveContext.fill();
+                  
+                  // Draw bright center on emissive canvas
+                  emissiveContext.globalAlpha = brightness;
+                  emissiveContext.fillStyle = glowColor;
+                  emissiveContext.beginPath();
+                  emissiveContext.arc(
+                    actualX + px, 
+                    y - textHeight/2 + py, 
+                    dotSize,
+                    0, 
+                    Math.PI * 2
+                  );
+                  emissiveContext.fill();
+                }
+              }
+            }
+          }
+          
+          // Reset drawing states
+          emissiveContext.globalCompositeOperation = 'source-over';
+          emissiveContext.globalAlpha = 1.0;
+          context.globalCompositeOperation = 'source-over';
           context.globalAlpha = 1.0;
         };
         
-        // Title with strong AMOLED glow
-        drawAmoledText(
-          'SMART HOME IoT GATEWAY', 
-          canvas.width / 2, 
-          90, 
-          '#00ff88', 
-          '72px', 
-          'center'
-        );
+        // Draw all text with the AMOLED dotted effect
+        drawDottedText('SMART HOME IoT GATEWAY', canvas.width / 2, 90, '72px', 'center');
+        drawDottedText('Status:', 60, 200);
+        drawDottedText('ONLINE', canvas.width - 60, 200, '60px', 'right');
+        drawDottedText('Network:', 60, 300);
+        drawDottedText('WiFi + Ethernet', canvas.width - 60, 300, '60px', 'right');
+        drawDottedText('Devices:', 60, 400);
+        drawDottedText('12 Connected', canvas.width - 60, 400, '60px', 'right');
+        drawDottedText('System:', 60, 500);
+        drawDottedText('60%', canvas.width - 60, 500, '60px', 'right');
         
-        // Status indicators with different colors
-        drawAmoledText('Status:', 60, 200, '#ff8800');
-        drawAmoledText('ONLINE', canvas.width - 60, 200, '#00ffff', '60px', 'right');
-        
-        drawAmoledText('Network:', 60, 300, '#ff8800');
-        drawAmoledText('WiFi + Ethernet', canvas.width - 60, 300, '#00ffff', '60px', 'right');
-        
-        drawAmoledText('Devices:', 60, 400, '#ff8800');
-        drawAmoledText('12 Connected', canvas.width - 60, 400, '#00ffff', '60px', 'right');
-        
-        drawAmoledText('System:', 60, 500, '#ff8800');
-        drawAmoledText('60%', canvas.width - 60, 500, '#00ffff', '60px', 'right');
-        
-        // Progress bar with AMOLED glow
+        // Progress bar with dotted effect
         const barWidth = 400;
         const barHeight = 36;
         const barX = canvas.width - barWidth - 280;
         const barY = 482;
         
-        // Bar container (dark outline)
-        context.strokeStyle = '#333333';
+        // Draw outline on main canvas
+        context.strokeStyle = '#ffffff';
         context.lineWidth = 2;
         context.strokeRect(barX, barY, barWidth, barHeight);
         
-        // Progress value with glow
+        // Draw outline on emissive canvas
+        const glowColor = isDarkMode ? '#44ff66' : '#006644';
+        emissiveContext.strokeStyle = glowColor;
+        emissiveContext.lineWidth = 2;
+        emissiveContext.strokeRect(barX, barY, barWidth, barHeight);
+        
+        // Draw progress bar with dotted effect (similar approach for both canvases)
         const loadPercent = 60;
+        const fillWidth = barWidth * (loadPercent / 100);
         
-        // Bar glow effect
-        context.shadowColor = '#ff6600';
-        context.shadowBlur = 15;
-        context.shadowOffsetX = 0;
-        context.shadowOffsetY = 0;
-        context.fillStyle = '#ff6600';
-        context.fillRect(barX, barY, barWidth * (loadPercent / 100), barHeight);
+        // Glow effect for progress bar
+        context.globalCompositeOperation = 'lighter';
+        const dotSize = 3;
+        const dotSpacing = 5;
         
-        // Inner highlight
-        context.shadowBlur = 0;
-        context.globalAlpha = 0.7;
-        context.fillStyle = '#ffaa00';
-        context.fillRect(
-          barX + 2, 
-          barY + 2, 
-          (barWidth * (loadPercent / 100)) - 4, 
-          barHeight / 2 - 2
-        );
+        // Glow layer
+        context.globalAlpha = 0.3;
+        for (let py = 0; py < barHeight; py += dotSpacing) {
+          for (let px = 0; px < fillWidth; px += dotSpacing) {
+            context.fillStyle = glowColor;
+            context.beginPath();
+            context.arc(barX + px, barY + py, dotSize * 1.8, 0, Math.PI * 2);
+            context.fill();
+          }
+        }
+        
+        // Bright centers
+        context.globalAlpha = 0.8;
+        for (let py = 0; py < barHeight; py += dotSpacing) {
+          for (let px = 0; px < fillWidth; px += dotSpacing) {
+            context.fillStyle = glowColor;
+            context.beginPath();
+            context.arc(barX + px, barY + py, dotSize, 0, Math.PI * 2);
+            context.fill();
+          }
+        }
+        
+        // Reset
+        context.globalCompositeOperation = 'source-over';
         context.globalAlpha = 1.0;
         
-        // Time display with green glow
+        // Time display with glow
         const now = new Date();
         const timeString = now.toLocaleTimeString();
-        drawAmoledText(
-          timeString, 
-          canvas.width / 2, 
-          canvas.height - 60, 
-          '#00ff88', 
-          '48px', 
-          'center'
-        );
+        drawDottedText(timeString, canvas.width / 2, canvas.height - 60, '48px', 'center');
         
-        // Apply texture with proper filtering
-        const texture = new THREE.CanvasTexture(canvas);
-        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
-        texture.minFilter = THREE.LinearFilter;
-        texture.magFilter = THREE.LinearFilter;
+        // Create two textures - one for the diffuse map and one for the emissive map
+        const diffuseTexture = new THREE.CanvasTexture(canvas);
+        diffuseTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        diffuseTexture.minFilter = THREE.LinearFilter;
+        diffuseTexture.magFilter = THREE.LinearFilter;
         
-        // Use the material itself for text glow, not external lights
+        const emissiveTexture = new THREE.CanvasTexture(emissiveCanvas);
+        emissiveTexture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        emissiveTexture.minFilter = THREE.LinearFilter;
+        emissiveTexture.magFilter = THREE.LinearFilter;
+        
+        // Create display material with black background but emissive map for glowing text
         display.material = new THREE.MeshStandardMaterial({
-          map: texture,
-          emissive: 0x000000,
-          emissiveMap: texture,
-          emissiveIntensity: isDarkMode ? 0.9 : 0.7, // Reduced intensity
-          roughness: 0.4, // Increased roughness to reduce reflections
-          metalness: 0.6  // Reduced metalness to minimize reflective glare
+          map: diffuseTexture,
+          color: 0x000000,          // Pure black base color
+          roughness: 0.1,
+          metalness: 0.9,
+          emissive: isDarkMode ? 0x44ff66 : 0x006644,
+          emissiveMap: emissiveTexture,
+          emissiveIntensity: isDarkMode ? 0.8 : 0.4
         });
       }
     };
     
     createDisplayContent();
     
-    // The display will use only its own emissive material properties for glow
-    // No additional light source needed - this prevents the moving glare effect
+    // Store the current material to inspect in console
+    console.log("Display material:", display.material);
+    
+    // Check the correct display element is being modified
+    console.log("Display object position:", display.position);
     
     // Update display periodically to show real-time data
-    const displayUpdateInterval = setInterval(createDisplayContent, 1000);
+    displayUpdateInterval = setInterval(createDisplayContent, 1000);
     
     // Handle resize
     const handleResize = () => {
@@ -722,7 +815,7 @@ export default function IoTGateway() {
     }
     
     // Cleanup function
-    return () => {
+    const originalCleanup = () => {
       if (mountRef.current) {
         mountRef.current.removeChild(renderer.domElement);
         if (mountRef.current.contains(toggleDarkModeHandler)) {
@@ -732,6 +825,13 @@ export default function IoTGateway() {
       window.removeEventListener('resize', handleResize);
       controls.dispose();
       clearInterval(displayUpdateInterval);  // Clear the display update interval
+    };
+
+    return () => {
+      if (displayUpdateInterval) {
+        clearInterval(displayUpdateInterval);
+      }
+      originalCleanup();
     };
   }, [isDarkMode]);
   
