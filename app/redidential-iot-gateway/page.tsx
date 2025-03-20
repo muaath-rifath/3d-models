@@ -22,7 +22,7 @@ export default function IoTGateway() {
       0.1, 
       1000
     );
-    camera.position.set(0, 10, 40);
+    camera.position.set(0, 10, 60);  // Increased Z position to prevent clipping
     
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
@@ -130,9 +130,9 @@ export default function IoTGateway() {
     topSurface.receiveShadow = true;
     gatewayGroup.add(topSurface);
     
-    // Status display - curved to match cylinder
-    const displayWidth = 4;
-    const displayHeight = 2;
+    // Status display - curved to match cylinder with increased size
+    const displayWidth = 6;  // Increased from 4
+    const displayHeight = 3; // Increased from 2
     const displayCurveRadius = radius + 0.05;
     const displayCurveSegments = 16;
     const displayAngle = Math.atan2(displayWidth / 2, displayCurveRadius) * 2;
@@ -530,8 +530,9 @@ export default function IoTGateway() {
     const createDisplayContent = () => {
       const canvas = document.createElement('canvas');
       const context = canvas.getContext('2d');
-      canvas.width = 2048;
-      canvas.height = 1024;
+      // Increase canvas resolution for better text rendering
+      canvas.width = 2560;  // Increased from 2048
+      canvas.height = 1280; // Increased from 1024
       
       if (context) {
         // Pure black background for AMOLED effect
@@ -555,7 +556,7 @@ export default function IoTGateway() {
           text: string, 
           x: number, 
           y: number, 
-          fontSize: string = '60px', 
+          fontSize: string = '72px', // Increased from 60px
           align: CanvasTextAlign = 'left'
         ) => {
           // First render text to an offscreen canvas to get pixel data
@@ -565,13 +566,13 @@ export default function IoTGateway() {
           if (!tempContext) return;
           
           // Define dot size and spacing before using them
-          const dotSize = 3; // Size of each "pixel" dot
-          const dotSpacing = 5; // Space between dots - moved up before use
+          const dotSize = 4; // Increased from 3
+          const dotSpacing = 6; // Increased from 5
           
           // Size the temp canvas based on text size
           const size = parseInt(fontSize);
-          const textWidth = size * text.length * 0.6;
-          const textHeight = size * 1.2;
+          const textWidth = size * text.length * 0.7; // Increased from 0.6 to give more space
+          const textHeight = size * 1.3; // Increased from 1.2
           tempCanvas.width = textWidth;
           tempCanvas.height = textHeight;
           
@@ -673,31 +674,31 @@ export default function IoTGateway() {
         };
         
         // Draw all text with the AMOLED dotted effect
-        drawDottedText('SMART HOME IoT GATEWAY', canvas.width / 2, 90, '72px', 'center');
-        drawDottedText('Status:', 60, 200);
-        drawDottedText('ONLINE', canvas.width - 60, 200, '60px', 'right');
-        drawDottedText('Network:', 60, 300);
-        drawDottedText('WiFi + Ethernet', canvas.width - 60, 300, '60px', 'right');
-        drawDottedText('Devices:', 60, 400);
-        drawDottedText('12 Connected', canvas.width - 60, 400, '60px', 'right');
-        drawDottedText('System:', 60, 500);
-        drawDottedText('60%', canvas.width - 60, 500, '60px', 'right');
+        drawDottedText('SMART HOME IoT GATEWAY', canvas.width / 2, 120, '90px', 'center'); // Increased size
+        drawDottedText('Status:', 80, 250, '72px');  // Repositioned and sized up
+        drawDottedText('ONLINE', canvas.width - 80, 250, '72px', 'right');
+        drawDottedText('Network:', 80, 370, '72px');
+        drawDottedText('WiFi + Ethernet', canvas.width - 80, 370, '72px', 'right');
+        drawDottedText('Devices:', 80, 490, '72px');
+        drawDottedText('12 Connected', canvas.width - 80, 490, '72px', 'right');
+        drawDottedText('System:', 80, 610, '72px');
+        drawDottedText('60%', canvas.width - 80, 610, '72px', 'right');
         
         // Progress bar with dotted effect
-        const barWidth = 400;
-        const barHeight = 36;
-        const barX = canvas.width - barWidth - 280;
-        const barY = 482;
+        const barWidth = 600;   // Increased from 400
+        const barHeight = 50;   // Increased from 36
+        const barX = canvas.width - barWidth - 300;
+        const barY = 585;
         
         // Draw outline on main canvas
         context.strokeStyle = '#ffffff';
-        context.lineWidth = 2;
+        context.lineWidth = 3;  // Increased from 2
         context.strokeRect(barX, barY, barWidth, barHeight);
         
         // Draw outline on emissive canvas
         const glowColor = isDarkMode ? '#44ff66' : '#006644';
         emissiveContext.strokeStyle = glowColor;
-        emissiveContext.lineWidth = 2;
+        emissiveContext.lineWidth = 3;
         emissiveContext.strokeRect(barX, barY, barWidth, barHeight);
         
         // Draw progress bar with dotted effect (similar approach for both canvases)
@@ -706,8 +707,8 @@ export default function IoTGateway() {
         
         // Glow effect for progress bar
         context.globalCompositeOperation = 'lighter';
-        const dotSize = 3;
-        const dotSpacing = 5;
+        const dotSize = 4;
+        const dotSpacing = 8;
         
         // Glow layer
         context.globalAlpha = 0.3;
@@ -738,7 +739,7 @@ export default function IoTGateway() {
         // Time display with glow
         const now = new Date();
         const timeString = now.toLocaleTimeString();
-        drawDottedText(timeString, canvas.width / 2, canvas.height - 60, '48px', 'center');
+        drawDottedText(timeString, canvas.width / 2, canvas.height - 80, '60px', 'center'); // Increased size
         
         // Create two textures - one for the diffuse map and one for the emissive map
         const diffuseTexture = new THREE.CanvasTexture(canvas);
