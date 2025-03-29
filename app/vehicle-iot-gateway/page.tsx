@@ -10,8 +10,8 @@ interface WaveData {
   scale: number;
   opacity: number;
   created: number;
-  innerRadius: number;
-  outerRadius: number;
+  coneHeight: number;
+  coneRadius: number;
 }
 
 interface WaveEmitter {
@@ -34,6 +34,7 @@ export default function VehicleIoTGateway() {
     // Scene, camera, and renderer setup
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(isDarkMode ? 0x0a1a20 : 0xf0f8ff);
+    scene.fog = new THREE.FogExp2(isDarkMode ? 0x0a1a20 : 0xf0f8ff, 0.02);
     
     const camera = new THREE.PerspectiveCamera(
       45, 
@@ -252,6 +253,18 @@ export default function VehicleIoTGateway() {
     const antennaSection = (() => {
       const antennaGroup = new THREE.Group();
       
+      // Update wave configuration parameters with improved values
+      const WAVE_CONFIG = {
+        coneAngle: Math.PI/6,      // 30 degrees cone angle
+        maxHeight: 10,             // Maximum propagation height
+        rotationSpeed: 0.03,       // Rotation speed
+        segments: 32,              // Ring segment count for smoother circles
+        lifespan: 3000,            // Wave lifetime in milliseconds
+        initialRingSize: 0.15,     // Initial ring radius
+        fadeStart: 0.7,            // Start fading after 70% progress
+        expansionRate: 1.5         // Controls cone expansion speed
+      };
+
       // Main antenna housing - elevated platform on top of device
       const housingGeometry = new THREE.BoxGeometry(length / 2, 0.8, width / 2);
       const housing = new THREE.Mesh(housingGeometry, antennaBaseMaterial);
@@ -338,30 +351,45 @@ export default function VehicleIoTGateway() {
       const createWave = (waveData: WaveEmitter) => {
         const { group, color } = waveData;
         
-        // Create expanding ring for the wave
-        const waveGeometry = new THREE.RingGeometry(0.05, 0.15, 16);
-        const waveMaterial = new THREE.MeshBasicMaterial({
+        // Create a ring geometry with more segments for smoothness
+        const ringGeometry = new THREE.RingGeometry(
+          WAVE_CONFIG.initialRingSize * 0.7,  // Inner radius
+          WAVE_CONFIG.initialRingSize,        // Outer radius
+          WAVE_CONFIG.segments                // Segments for smooth circle
+        );
+        
+        // Create material with depth writing disabled for better transparency
+        const waveMaterial = new THREE.MeshStandardMaterial({
           color: color,
+          side: THREE.DoubleSide,
           transparent: true,
-          opacity: 0.7,
-          side: THREE.DoubleSide
+          opacity: 0.8,
+          depthWrite: false,
+          metalness: 0.3,
+          roughness: 0.4,
+          emissive: color,
+          emissiveIntensity: 0.3
         });
         
-        const wave = new THREE.Mesh(waveGeometry, waveMaterial);
-        // Make wave face upward
-        wave.rotation.x = -Math.PI / 2;
+        const wave = new THREE.Mesh(ringGeometry, waveMaterial);
         
-        // Add to group
+        // Critical rotation adjustment: Rotate 90 degrees around X-axis
+        // This makes the ring vertical (parallel to the antenna)
+        wave.rotation.x = Math.PI / 2;
+        
+        // Initial position at antenna tip
+        wave.position.set(0, 0, 0);
+        
         group.add(wave);
         
         // Store wave data for animation
         waveData.waves.push({
           mesh: wave,
           scale: 1,
-          opacity: 0.7,
+          opacity: 0.8,
           created: Date.now(),
-          innerRadius: 0.05,
-          outerRadius: 0.15
+          coneHeight: 0,
+          coneRadius: WAVE_CONFIG.initialRingSize
         });
       };
       
@@ -380,41 +408,51 @@ export default function VehicleIoTGateway() {
           for (let i = waveData.waves.length - 1; i >= 0; i--) {
             const wave = waveData.waves[i];
             const age = now - wave.created;
-            const lifespan = 3000; // 3 second lifespan
+            const lifespan = WAVE_CONFIG.lifespan;
             
             if (age < lifespan) {
-              // Calculate growth based on age
               const progress = age / lifespan;
-              const newScale = 1 + progress * 5; // Grow to 6x original size
-              wave.scale = newScale;
               
-              // Update the wave ring (can't just scale it)
-              const innerRadius = wave.innerRadius * newScale;
-              const outerRadius = wave.outerRadius * newScale;
+              // Calculate height based on progress
+              const height = progress * WAVE_CONFIG.maxHeight;
               
-              // Replace the geometry with a new one (more efficient than modifying)
-              if (age % 100 < 20) { // Update less frequently for performance
-                const oldGeometry = wave.mesh.geometry;
-                wave.mesh.geometry = new THREE.RingGeometry(innerRadius, outerRadius, 16);
-                oldGeometry.dispose();
+              // Calculate radius based on cone angle and height
+              // This uses proper trigonometry for conical expansion
+              const radius = Math.tan(WAVE_CONFIG.coneAngle) * height;
+              
+              // Update position - move upward along Y axis (antenna direction)
+              wave.mesh.position.y = height;
+              
+              // Scale the ring to match the cone radius at current height
+              // This creates the conical expansion effect
+              const ringScale = 1 + radius / WAVE_CONFIG.initialRingSize;
+              wave.mesh.scale.set(ringScale, ringScale, 1);
+              
+              // Add rotation animation for better visual effect
+              wave.mesh.rotation.z += WAVE_CONFIG.rotationSpeed;
+              
+              // Fade out gradually - more transparent as it moves up
+              const newOpacity = 0.8 * (1 - progress);
+              
+              if (wave.mesh.material) {
+                if (Array.isArray(wave.mesh.material)) {
+                  wave.mesh.material.forEach(mat => {
+                    mat.opacity = newOpacity;
+                  });
+                } else {
+                  wave.mesh.material.opacity = newOpacity;
+                }
               }
               
-              // Fade out gradually
-              const newOpacity = 0.7 * (1 - progress);
+              // Update tracking values
+              wave.coneHeight = height;
               wave.opacity = newOpacity;
-              // Handle material which could be a single material or array
-              if (Array.isArray(wave.mesh.material)) {
-                wave.mesh.material.forEach(mat => {
-                  mat.opacity = newOpacity;
-                });
-              } else {
-                wave.mesh.material.opacity = newOpacity;
-              }
+              
             } else {
               // Remove expired waves
               waveData.group.remove(wave.mesh);
               wave.mesh.geometry.dispose();
-              // Dispose material properly whether it's an array or single material
+              
               if (Array.isArray(wave.mesh.material)) {
                 wave.mesh.material.forEach(mat => {
                   mat.dispose();
@@ -422,6 +460,7 @@ export default function VehicleIoTGateway() {
               } else {
                 wave.mesh.material.dispose();
               }
+              
               waveData.waves.splice(i, 1);
             }
           }
@@ -745,14 +784,7 @@ export default function VehicleIoTGateway() {
     const mountingOptions = (() => {
       const mountGroup = new THREE.Group();
       
-      // Magnetic mount
-      const magnetBaseGeometry = new THREE.CylinderGeometry(2, 2, 0.3, 32);
-      const magnetBase = new THREE.Mesh(magnetBaseGeometry, mountingMaterial);
-      magnetBase.position.set(0, -halfHeight - 0.3, 0);
-      magnetBase.visible = false; // Start hidden, toggle between mount types
-      mountGroup.add(magnetBase);
-      
-      // Bracket mount
+      // Bracket mount - this will be our permanent mount
       const bracketGroup = new THREE.Group();
       
       // Horizontal part
@@ -796,46 +828,8 @@ export default function VehicleIoTGateway() {
       hole4.rotation.x = Math.PI / 2;
       bracketGroup.add(hole4);
       
+      // Add the bracket mount to the group
       mountGroup.add(bracketGroup);
-      bracketGroup.visible = true; // Start with bracket mount visible
-      
-      // Adhesive mount
-      const adhesiveBaseGeometry = new THREE.BoxGeometry(length - 1, 0.2, width - 1);
-      const adhesiveBase = new THREE.Mesh(adhesiveBaseGeometry, mountingMaterial);
-      adhesiveBase.position.y = -halfHeight - 0.2;
-      adhesiveBase.visible = false; // Start hidden
-      mountGroup.add(adhesiveBase);
-      
-      // Toggle between mounting options
-      let activeMountIndex = 1; // Start with bracket mount (index 1)
-      const mountingOptions = [magnetBase, bracketGroup, adhesiveBase];
-      
-      const toggleMountButton = document.createElement('button');
-      toggleMountButton.textContent = 'Toggle Mount Type';
-      toggleMountButton.style.position = 'absolute';
-      toggleMountButton.style.top = '60px';
-      toggleMountButton.style.left = '20px';
-      toggleMountButton.style.padding = '10px';
-      toggleMountButton.style.backgroundColor = '#333';
-      toggleMountButton.style.color = '#fff';
-      toggleMountButton.style.border = 'none';
-      toggleMountButton.style.borderRadius = '5px';
-      toggleMountButton.style.cursor = 'pointer';
-      
-      toggleMountButton.onclick = () => {
-        // Hide current mount
-        mountingOptions[activeMountIndex].visible = false;
-        
-        // Increment index and wrap around
-        activeMountIndex = (activeMountIndex + 1) % mountingOptions.length;
-        
-        // Show new mount
-        mountingOptions[activeMountIndex].visible = true;
-      };
-      
-      if (mountRef.current) {
-        mountRef.current.appendChild(toggleMountButton);
-      }
       
       return mountGroup;
     })();
