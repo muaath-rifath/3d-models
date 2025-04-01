@@ -33,8 +33,9 @@ export default function VehicleIoTGateway() {
 
     // Scene, camera, and renderer setup
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color(isDarkMode ? 0x0a1a20 : 0xf0f8ff);
-    scene.fog = new THREE.FogExp2(isDarkMode ? 0x0a1a20 : 0xf0f8ff, 0.02);
+    // Use a soft green-gray instead of blue-gray for light mode
+    scene.background = new THREE.Color(isDarkMode ? 0x0a1a20 : 0xe0f0e8);
+    scene.fog = new THREE.FogExp2(isDarkMode ? 0x0a1a20 : 0xe0f0e8, 0.02);
     
     const camera = new THREE.PerspectiveCamera(
       45, 
@@ -60,21 +61,21 @@ export default function VehicleIoTGateway() {
     controls.dampingFactor = 0.05;
     
     // Lighting
-    const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+    const ambientLight = new THREE.AmbientLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.5);
     scene.add(ambientLight);
     
-    const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    const directionalLight = new THREE.DirectionalLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.8);
     directionalLight.position.set(5, 10, 5);
     directionalLight.castShadow = true;
     scene.add(directionalLight);
     
-    const pointLight = new THREE.PointLight(0xffffff, 0.5);
+    const pointLight = new THREE.PointLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.5);
     pointLight.position.set(-5, 5, -5);
     scene.add(pointLight);
     
     // Materials
     const mainBodyMaterial = new THREE.MeshStandardMaterial({
-      color: isDarkMode ? 0x1a2e20 : 0xd0e8ff,
+      color: isDarkMode ? 0x1a2e20 : 0xc0e8d0, // Softer green for light mode
       roughness: 0.7,
       metalness: 0.3
     });
@@ -319,7 +320,7 @@ export default function VehicleIoTGateway() {
         canvas.height = 32;
         
         if (context) {
-          context.fillStyle = isDarkMode ? '#ffffff' : '#000000';
+          context.fillStyle = isDarkMode ? '#ccddee' : '#335544'; // Greenish text for light mode
           context.font = '12px Arial';
           context.fillText(label, 5, 20);
           
@@ -529,7 +530,7 @@ export default function VehicleIoTGateway() {
             
             // Label
             context.font = '16px Arial';
-            context.fillStyle = '#ffffff';
+            context.fillStyle = '#ccddee'; // Changed from #ffffff
             context.textAlign = 'left';
             context.fillText(label, 20, y + 5);
             
@@ -543,7 +544,7 @@ export default function VehicleIoTGateway() {
             
             // Strength text
             context.font = '12px Arial';
-            context.fillStyle = '#ffffff';
+            context.fillStyle = '#ccddee'; // Changed from #ffffff
             context.textAlign = 'left';
             context.fillText(`${Math.round(strength)}%`, x + barWidth + 10, y + 4);
           };
@@ -551,7 +552,7 @@ export default function VehicleIoTGateway() {
           // Current time
           const now = new Date();
           context.font = '16px Arial';
-          context.fillStyle = '#ffffff';
+          context.fillStyle = '#ccddee'; // Changed from #ffffff
           context.textAlign = 'right';
           context.fillText(now.toLocaleTimeString(), canvas.width - 20, 35);
           
@@ -614,7 +615,7 @@ export default function VehicleIoTGateway() {
       simCanvas.height = 64;
       
       if (simContext) {
-        simContext.fillStyle = isDarkMode ? '#ffffff' : '#000000';
+        simContext.fillStyle = isDarkMode ? '#ccddee' : '#335544'; // Greenish text for light mode
         simContext.font = '14px Arial';
         simContext.fillText("SIM", 10, 20);
         
@@ -646,7 +647,7 @@ export default function VehicleIoTGateway() {
       sdCanvas.height = 64;
       
       if (sdContext) {
-        sdContext.fillStyle = isDarkMode ? '#ffffff' : '#000000';
+        sdContext.fillStyle = isDarkMode ? '#ccddee' : '#335544'; // Greenish text for light mode
         sdContext.font = '14px Arial';
         sdContext.fillText("SD", 10, 20);
         
@@ -700,7 +701,7 @@ export default function VehicleIoTGateway() {
       voltageCanvas.height = 64;
       
       if (voltageContext) {
-        voltageContext.fillStyle = '#ffffff';
+        voltageContext.fillStyle = isDarkMode ? '#ccddee' : '#335544'; // Greenish text
         voltageContext.font = '16px Arial';
         voltageContext.fillText("12-24V", 10, 30);
         
@@ -749,7 +750,7 @@ export default function VehicleIoTGateway() {
         canvas.height = 32;
         
         if (context) {
-          context.fillStyle = isDarkMode ? '#ffffff' : '#000000';
+          context.fillStyle = isDarkMode ? '#ccddee' : '#335544'; // Greenish text for light mode
           context.font = '10px Arial';
           context.fillText(label, 5, 15);
           
@@ -906,8 +907,8 @@ export default function VehicleIoTGateway() {
     toggleDarkModeHandler.style.top = '20px';
     toggleDarkModeHandler.style.left = '20px';
     toggleDarkModeHandler.style.padding = '10px';
-    toggleDarkModeHandler.style.backgroundColor = '#333';
-    toggleDarkModeHandler.style.color = '#fff';
+    toggleDarkModeHandler.style.backgroundColor = isDarkMode ? '#333' : '#497'; // Greenish background for light mode
+    toggleDarkModeHandler.style.color = isDarkMode ? '#dfe6f0' : '#e0f0e8'; // Match scene background
     toggleDarkModeHandler.style.border = 'none';
     toggleDarkModeHandler.style.borderRadius = '5px';
     toggleDarkModeHandler.style.cursor = 'pointer';
