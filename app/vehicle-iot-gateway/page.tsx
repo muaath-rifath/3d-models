@@ -461,7 +461,7 @@ export default function VehicleIoTGateway() {
                 wave.mesh.material.dispose();
               }
               
-              waveData.waves.splice(i, 1);
+               waveData.waves.splice(i, 1);
             }
           }
         });
