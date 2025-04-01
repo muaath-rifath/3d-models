@@ -33,15 +33,14 @@ export default function VehicleIoTGateway() {
 
     // Scene, camera, and renderer setup
     const scene = new THREE.Scene();
-    // Use a soft green-gray instead of blue-gray for light mode
+    // Use a soft green-gray instead of blue-gray for light mode, but remove fog
     scene.background = new THREE.Color(isDarkMode ? 0x0a1a20 : 0xe0f0e8);
-    scene.fog = new THREE.FogExp2(isDarkMode ? 0x0a1a20 : 0xe0f0e8, 0.02);
     
     const camera = new THREE.PerspectiveCamera(
       45, 
       window.innerWidth / window.innerHeight, 
       0.1, 
-      1000
+      1000 // Increased far clipping plane for better visibility at distance
     );
     camera.position.set(0, 15, 30);
     
@@ -59,17 +58,27 @@ export default function VehicleIoTGateway() {
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
+    controls.minDistance = 5;
+    controls.maxDistance = 100;
     
     // Lighting
-    const ambientLight = new THREE.AmbientLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.5);
+    const ambientLight = new THREE.AmbientLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.7); // Increased intensity
     scene.add(ambientLight);
     
-    const directionalLight = new THREE.DirectionalLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.8);
+    const directionalLight = new THREE.DirectionalLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 1.0); // Increased intensity
     directionalLight.position.set(5, 10, 5);
     directionalLight.castShadow = true;
+    directionalLight.shadow.mapSize.width = 2048;
+    directionalLight.shadow.mapSize.height = 2048;
+    directionalLight.shadow.camera.near = 0.5;
+    directionalLight.shadow.camera.far = 500;
     scene.add(directionalLight);
     
-    const pointLight = new THREE.PointLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.5);
+    const directionalLight2 = new THREE.DirectionalLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.7);
+    directionalLight2.position.set(-5, 8, -10);
+    scene.add(directionalLight2);
+    
+    const pointLight = new THREE.PointLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.7); // Increased intensity
     pointLight.position.set(-5, 5, -5);
     scene.add(pointLight);
     
