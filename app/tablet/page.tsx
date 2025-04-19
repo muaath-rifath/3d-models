@@ -21,79 +21,78 @@ export default function Tablet() {
         // Renamed ref check
         if (!sceneRef.current || !tabletRef.current) return;
 
-        // Update scene background
-        sceneRef.current.background = new THREE.Color(isDark ? 0x080812 : 0xf0f0f0); // Slightly different dark bg
+        // Update scene background - Green tint
+        sceneRef.current.background = new THREE.Color(isDark ? 0x081208 : 0xf0f4f0);
 
         // Update tablet materials (using tabletRef)
         tabletRef.current.traverse((object) => {
             if (object instanceof THREE.Mesh) {
                 const material = object.material as THREE.MeshStandardMaterial;
 
-                // Identify parts by their name and update accordingly
-                // Example: Slightly different body color for tablet
+                // Identify parts by their name and update accordingly - Green Theme
                 if (material.name === 'tablet_body') {
-                    material.color.set(isDark ? 0x50505e : 0xe0e0ff); // Different body color
-                    material.emissive.set(isDark ? 0x252530 : 0x000000);
+                    material.color.set(isDark ? 0x505e50 : 0xe0ffe0); // Adapted green body
+                    material.emissive.set(isDark ? 0x253025 : 0x000000);
                     material.emissiveIntensity = isDark ? 0.30 : 0;
                 }
                 else if (material.name === 'screen') {
-                    material.color.set(isDark ? 0x00aaff : 0x0088cc); // Slightly different screen
-                    material.emissive.set(isDark ? 0x0088aa : 0x0066aa);
+                    material.color.set(isDark ? 0x00ffbb : 0x00aa99); // Adapted green screen
+                    material.emissive.set(isDark ? 0x00aa88 : 0x008866);
                     material.emissiveIntensity = isDark ? 0.5 : 0.2;
                 }
                 else if (material.name === 'ui_element') {
-                    material.color.set(isDark ? 0xaaffff : 0x00aabb); // Different UI element
-                    material.emissive.set(isDark ? 0x66cccc : 0x000000);
+                    material.color.set(isDark ? 0xafffaf : 0x00aa88); // Adapted green UI
+                    material.emissive.set(isDark ? 0x66cc66 : 0x000000);
                     material.emissiveIntensity = isDark ? 0.7 : 0.0;
                 }
                 else if (material.name === 'accent') {
-                    material.color.set(isDark ? 0x66aaff : 0x0044aa); // Different accent
-                    material.emissive.set(isDark ? 0x4488ff : 0x000000);
+                    material.color.set(isDark ? 0x66ffaa : 0x00aa66); // Adapted green accent
+                    material.emissive.set(isDark ? 0x44cc88 : 0x000000);
                     material.emissiveIntensity = isDark ? 0.6 : 0.0;
                 }
                 else if (material.name === 'camera') {
-                    material.color.set(isDark ? 0x333344 : 0x555566); // Different camera
-                    material.emissive.set(isDark ? 0x111122 : 0x000000);
+                    material.color.set(isDark ? 0x334433 : 0x556655); // Greenish tint camera
+                    material.emissive.set(isDark ? 0x112211 : 0x000000);
                     material.emissiveIntensity = isDark ? 0.3 : 0.0;
                 }
                 else if (material.name === 'camera_lens') {
-                    material.color.set(isDark ? 0x444455 : 0x111111); // Different lens
-                    material.emissive.set(isDark ? 0x222233 : 0x000000);
+                    material.color.set(isDark ? 0x445544 : 0x111111); // Greenish tint lens
+                    material.emissive.set(isDark ? 0x223322 : 0x000000);
                     material.emissiveIntensity = isDark ? 0.1 : 0.0;
                 }
                 else if (material.name === 'port') {
-                    material.color.set(isDark ? 0x444444 : 0x888888); // Different port
+                    material.color.set(isDark ? 0x444444 : 0x888888); // Keep neutral grey
                 }
                 else if (material.name === 'buttons') {
-                    material.color.set(isDark ? 0x50505e : 0xe0e0ff); // Match tablet body dark color
-                    material.emissive.set(isDark ? 0x252530 : 0x000000); // Match tablet body emissive
+                    material.color.set(isDark ? 0x505e50 : 0xe0ffe0); // Match green body
+                    material.emissive.set(isDark ? 0x253025 : 0x000000);
                     material.emissiveIntensity = isDark ? 0.3 : 0.0;
                 }
                 // No notch for tablet example
                 // else if (material.name === 'notch') { ... }
                 else if (material.name === 'selfie_camera') {
-                    material.color.set(isDark ? 0x111111 : 0x000000);
+                    material.color.set(isDark ? 0x111111 : 0x000000); // Keep dark
                     material.emissive.set(isDark ? 0x111111 : 0x000000);
                     material.emissiveIntensity = isDark ? 0.1 : 0.0;
                 }
                 else if (material.name === 'graph_element') {
-                    material.color.set(isDark ? 0x88ddff : 0x00aacc); // Different graph
-                    material.emissive.set(isDark ? 0x44bbdd : 0x0088aa);
+                    material.color.set(isDark ? 0x88ffcc : 0x00ccaa); // Adapted green graph
+                    material.emissive.set(isDark ? 0x44ddaa : 0x00aa88);
                     material.emissiveIntensity = isDark ? 0.8 : 0.3;
                 }
                 else if (material.name === 'chart_element') {
-                    material.color.set(isDark ? 0x66ccff : 0x0066bb); // Different chart
-                    material.emissive.set(isDark ? 0x33aadd : 0x004499);
+                    material.color.set(isDark ? 0xccff66 : 0x88cc00); // Contrasting green/yellow chart
+                    material.emissive.set(isDark ? 0xaadd33 : 0x66aa00);
                     material.emissiveIntensity = isDark ? 0.8 : 0.3;
                 }
                 else if (material.name === 'text_element') {
-                    material.color.set(isDark ? 0xeeeeff : 0xffffff); // Different text
-                    material.emissive.set(isDark ? 0xccccff : 0xf0f0f0);
+                    material.color.set(isDark ? 0xeeffee : 0xffffff); // Greenish tint text
+                    material.emissive.set(isDark ? 0xccffcc : 0xf0f0f0);
                     material.emissiveIntensity = isDark ? 0.6 : 0.2;
                 }
                 else if (material.name === 'camera_ring') {
-                    material.color.set(isDark ? 0x66aaff : 0xbbbbbb); // Different ring color
-                    material.emissive.set(isDark ? 0x4488ff : 0x666666); // Different glow color
+                    material.color.set(isDark ? 0x66ffaa : 0xbbbbbb); // Adapted green ring
+                    material.emissive.set(isDark ? 0x44cc88 : 0x666666); // Adapted green glow
                     material.emissiveIntensity = isDark ? 0.8 : 0.2;
                 }
                 // Ensure other materials also update if needed
@@ -107,9 +106,9 @@ export default function Tablet() {
     useEffect(() => {
         if (!mountRef.current) return;
 
-        // Scene setup
+        // Scene setup - Green tint
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(isDarkMode ? 0x080812 : 0xf0f0f0); // Adjusted dark bg
+        scene.background = new THREE.Color(isDarkMode ? 0x081208 : 0xf0f4f0);
         sceneRef.current = scene;
 
         // Camera setup - Adjusted position and FoV for tablet
@@ -135,16 +134,16 @@ export default function Tablet() {
         controls.minDistance = 10; // Increased min distance
         controls.maxDistance = 40; // Increased max distance
 
-        // Lighting - Adjusted intensity for dark mode
+        // Lighting - Adjusted intensity and color for green theme
         const ambientLight = new THREE.AmbientLight(
-            isDarkMode ? 0x444455 : 0x909090,
-            isDarkMode ? 0.4 : 0.8 // Slightly lower dark ambient
+            isDarkMode ? 0x445544 : 0x909090, // Greenish ambient
+            isDarkMode ? 0.4 : 0.8
         );
         scene.add(ambientLight);
 
         const directionalLight = new THREE.DirectionalLight(
-            isDarkMode ? 0xaaccff : 0xffffff, // Cooler dark light
-            isDarkMode ? 0.7 : 0.9 // Slightly lower dark directional
+            isDarkMode ? 0xaaffcc : 0xffffff, // Greenish directional
+            isDarkMode ? 0.7 : 0.9
         );
         directionalLight.position.set(5, 10, 7);
         directionalLight.castShadow = true;
@@ -156,18 +155,18 @@ export default function Tablet() {
         directionalLight.shadow.camera.far = 50;
         scene.add(directionalLight);
 
-        // Add a backlight for more dimension
+        // Add a backlight for more dimension - Green tint
         const backLight = new THREE.DirectionalLight(
-            isDarkMode ? 0x4466aa : 0xddeeff, // Cooler dark backlight
+            isDarkMode ? 0x44aa66 : 0xddffee, // Greenish backlight
             isDarkMode ? 0.3 : 0.3
         );
         backLight.position.set(-3, 5, -5);
         scene.add(backLight);
 
-        // Add a spotlight for the screen to make it pop
+        // Add a spotlight for the screen to make it pop - Green tint
         const screenLight = new THREE.SpotLight(
-            isDarkMode ? 0x88ccff : 0xffffff, // Cooler dark spotlight
-            isDarkMode ? 0.6 : 0.4 // Slightly lower dark spotlight
+            isDarkMode ? 0x88ffcc : 0xffffff, // Greenish screen light
+            isDarkMode ? 0.6 : 0.4
         );
         screenLight.position.set(0, 0, 30); // Further away for larger screen
         screenLight.angle = 0.4; // Wider angle
@@ -176,79 +175,79 @@ export default function Tablet() {
         screenLight.distance = 50; // Increased distance
         scene.add(screenLight);
 
-        // Materials with enhanced properties - Adjusted for Tablet
+        // Materials with enhanced properties - Adjusted for Tablet Green Theme
         const createMaterials = (isDark: boolean) => {
             return {
-                // Renamed material key and adjusted properties
+                // Renamed material key and adjusted properties - Green Theme
                 tabletBody: new THREE.MeshStandardMaterial({
-                    name: 'tablet_body', // Renamed material name
-                    color: isDark ? 0x50505e : 0xe0e0ff, // Different body color
-                    metalness: 0.7, // Slightly less metallic
-                    roughness: 0.3, // Slightly rougher
-                    emissive: isDark ? 0x252530 : 0x000000,
+                    name: 'tablet_body',
+                    color: isDark ? 0x505e50 : 0xe0ffe0, // Adapted green body
+                    metalness: 0.7,
+                    roughness: 0.3,
+                    emissive: isDark ? 0x253025 : 0x000000,
                     emissiveIntensity: isDark ? 0.30 : 0,
                     side: THREE.DoubleSide
                 }),
 
                 screen: new THREE.MeshStandardMaterial({
                     name: 'screen',
-                    color: isDark ? 0x00aaff : 0x0088cc, // Slightly different screen
+                    color: isDark ? 0x00ffbb : 0x00aa99, // Adapted green screen
                     metalness: 0.1,
                     roughness: 0.05,
-                    emissive: isDark ? 0x0088aa : 0x0066aa,
+                    emissive: isDark ? 0x00aa88 : 0x008866,
                     emissiveIntensity: isDark ? 0.5 : 0.2,
                     side: THREE.FrontSide
                 }),
 
                 uiElement: new THREE.MeshStandardMaterial({
                     name: 'ui_element',
-                    color: isDark ? 0xaaffff : 0x00aabb, // Different UI element
+                    color: isDark ? 0xafffaf : 0x00aa88, // Adapted green UI
                     metalness: 0.1,
                     roughness: 0.1,
-                    emissive: isDark ? 0x66cccc : 0x000000,
+                    emissive: isDark ? 0x66cc66 : 0x000000,
                     emissiveIntensity: isDark ? 0.7 : 0.0
                 }),
 
                 accent: new THREE.MeshStandardMaterial({
                     name: 'accent',
-                    color: isDark ? 0x66aaff : 0x0044aa, // Different accent
+                    color: isDark ? 0x66ffaa : 0x00aa66, // Adapted green accent
                     metalness: 0.7,
                     roughness: 0.3,
-                    emissive: isDark ? 0x4488ff : 0x000000,
+                    emissive: isDark ? 0x44cc88 : 0x000000,
                     emissiveIntensity: isDark ? 0.6 : 0.0
                 }),
 
                 camera: new THREE.MeshStandardMaterial({
                     name: 'camera',
-                    color: isDark ? 0x333344 : 0x555566, // Different camera
+                    color: isDark ? 0x334433 : 0x556655, // Greenish tint camera
                     metalness: 0.9,
                     roughness: 0.4,
-                    emissive: isDark ? 0x111122 : 0x000000,
+                    emissive: isDark ? 0x112211 : 0x000000,
                     emissiveIntensity: isDark ? 0.3 : 0.0
                 }),
 
                 cameraLens: new THREE.MeshStandardMaterial({
                     name: 'camera_lens',
-                    color: isDark ? 0x444455 : 0x111111, // Different lens
+                    color: isDark ? 0x445544 : 0x111111, // Greenish tint lens
                     metalness: 0.1,
                     roughness: 0.1,
-                    emissive: isDark ? 0x222233 : 0x000000,
+                    emissive: isDark ? 0x223322 : 0x000000,
                     emissiveIntensity: isDark ? 0.1 : 0.0
                 }),
 
                 port: new THREE.MeshStandardMaterial({
                     name: 'port',
-                    color: isDark ? 0x444444 : 0x888888, // Different port
+                    color: isDark ? 0x444444 : 0x888888, // Keep neutral grey
                     metalness: 0.8,
                     roughness: 0.5
                 }),
 
                 buttons: new THREE.MeshStandardMaterial({
                     name: 'buttons',
-                    color: isDark ? 0x50505e : 0xe0e0ff, // Match tablet body dark color
+                    color: isDark ? 0x505e50 : 0xe0ffe0, // Match green body
                     metalness: 0.9,
                     roughness: 0.3,
-                    emissive: isDark ? 0x252530 : 0x000000, // Match tablet body emissive
+                    emissive: isDark ? 0x253025 : 0x000000,
                     emissiveIntensity: isDark ? 0.3 : 0.0
                 }),
 
@@ -256,7 +255,7 @@ export default function Tablet() {
 
                 selfieCamera: new THREE.MeshStandardMaterial({
                     name: 'selfie_camera',
-                    color: isDark ? 0x111111 : 0x000000,
+                    color: isDark ? 0x111111 : 0x000000, // Keep dark
                     metalness: 0.2,
                     roughness: 0.3,
                     emissive: isDark ? 0x111111 : 0x000000,
@@ -265,10 +264,10 @@ export default function Tablet() {
 
                 graphElement: new THREE.MeshStandardMaterial({
                     name: 'graph_element',
-                    color: isDark ? 0x88ddff : 0x00aacc, // Different graph
+                    color: isDark ? 0x88ffcc : 0x00ccaa, // Adapted green graph
                     metalness: 0.1,
                     roughness: 0.2,
-                    emissive: isDark ? 0x44bbdd : 0x0088aa,
+                    emissive: isDark ? 0x44ddaa : 0x00aa88,
                     emissiveIntensity: isDark ? 0.8 : 0.3,
                     transparent: true,
                     opacity: 0.9
@@ -276,10 +275,10 @@ export default function Tablet() {
 
                 chartElement: new THREE.MeshStandardMaterial({
                     name: 'chart_element',
-                    color: isDark ? 0x66ccff : 0x0066bb, // Different chart
+                    color: isDark ? 0xccff66 : 0x88cc00, // Contrasting green/yellow chart
                     metalness: 0.1,
                     roughness: 0.2,
-                    emissive: isDark ? 0x33aadd : 0x004499,
+                    emissive: isDark ? 0xaadd33 : 0x66aa00,
                     emissiveIntensity: isDark ? 0.8 : 0.3,
                     transparent: true,
                     opacity: 0.9
@@ -287,19 +286,19 @@ export default function Tablet() {
 
                 textElement: new THREE.MeshStandardMaterial({
                     name: 'text_element',
-                    color: isDark ? 0xeeeeff : 0xffffff, // Different text
+                    color: isDark ? 0xeeffee : 0xffffff, // Greenish tint text
                     metalness: 0.1,
                     roughness: 0.2,
-                    emissive: isDark ? 0xccccff : 0xf0f0f0,
+                    emissive: isDark ? 0xccffcc : 0xf0f0f0,
                     emissiveIntensity: isDark ? 0.6 : 0.2
                 }),
 
                 cameraRing: new THREE.MeshStandardMaterial({
                     name: 'camera_ring',
-                    color: isDark ? 0x66aaff : 0xbbbbbb, // Different ring color
+                    color: isDark ? 0x66ffaa : 0xbbbbbb, // Adapted green ring
                     metalness: 0.6,
                     roughness: 0.3,
-                    emissive: isDark ? 0x4488ff : 0x666666, // Different glow color
+                    emissive: isDark ? 0x44cc88 : 0x666666, // Adapted green glow
                     emissiveIntensity: isDark ? 0.8 : 0.2,
                     side: THREE.DoubleSide
                 })
@@ -377,72 +376,71 @@ export default function Tablet() {
                 return shape;
             };
 
-            // Dashboard Background - Adjusted dimensions
-            const dashboardWidth = screenWidth - 0.4; // Slightly larger inset
+            // Dashboard Background - Adjusted dimensions and Green Theme
+            const dashboardWidth = screenWidth - 0.4;
             const dashboardHeight = screenHeight - 0.4;
             const dashboardShape = createRoundedRectShape(dashboardWidth, dashboardHeight, screenCornerRadius);
 
-            // Create a hole for the punch-hole camera (optional, could be bezel camera)
-            const punchHoleRadius = 0.3; // Slightly larger radius
-            const punchHoleX = 0; // Centered horizontally
-            // Position near the top, adjusted for larger height
+            // Create a hole for the punch-hole camera
+            const punchHoleRadius = 0.3;
+            const punchHoleX = 0;
             const punchHoleY = dashboardHeight / 2 - 0.6;
 
             const punchHolePath = new THREE.Path();
             punchHolePath.absarc(punchHoleX, punchHoleY, punchHoleRadius, 0, Math.PI * 2, false);
-            dashboardShape.holes.push(punchHolePath); // Add the punch hole
+            dashboardShape.holes.push(punchHolePath);
 
-            // Adjusted dashboard material colors
+            // Adjusted dashboard material colors - Green Theme
             const dashboardMaterial = new THREE.MeshStandardMaterial({
-                color: isDarkMode ? 0x1a1a24 : 0xe8e8f4, // Cooler dark, lighter light
-                roughness: 0.6, // Slightly rougher
-                metalness: 0.02, // Less metallic
+                color: isDarkMode ? 0x1a241a : 0xe8f4e8, // Greenish dashboard
+                roughness: 0.6,
+                metalness: 0.02,
                 side: THREE.FrontSide,
                 transparent: true,
                 opacity: 0.97,
-                emissive: isDarkMode ? 0x020205 : 0x000000,
+                emissive: isDarkMode ? 0x020502 : 0x000000,
                 emissiveIntensity: isDarkMode ? 0.05 : 0,
             });
             const dashboardGeometry = new THREE.ShapeGeometry(dashboardShape);
             const dashboardBg = new THREE.Mesh(dashboardGeometry, dashboardMaterial);
             dashboardBg.position.z = dashboardBgZ;
-            tablet.add(dashboardBg); // Add to tablet group
+            tablet.add(dashboardBg);
 
-            // Add Dashboard Border (Optional, subtle) - Adjusted colors
+            // Add Dashboard Border (Optional, subtle) - Adjusted colors - Green Theme
             const borderPoints = dashboardShape.getPoints(50);
             const borderGeometry = new THREE.BufferGeometry().setFromPoints(borderPoints);
             const borderMaterial = new THREE.LineBasicMaterial({
-                color: isDarkMode ? 0x444466 : 0xaaaaaa, // Cooler dark border
+                color: isDarkMode ? 0x446644 : 0xaaaaaa, // Greenish border
                 linewidth: 1,
                 transparent: true,
                 opacity: 0.5
             });
             const dashboardBorder = new THREE.LineLoop(borderGeometry, borderMaterial);
             dashboardBorder.position.z = dashboardBgZ + 0.0001;
-            tablet.add(dashboardBorder); // Add to tablet group
+            tablet.add(dashboardBorder);
 
-            // --- Front Camera ---
+            // --- Front Camera --- (No color changes needed)
             const selfieCameraGeometry = new THREE.CircleGeometry(punchHoleRadius * 0.9, 32);
             const selfieCamera = new THREE.Mesh(selfieCameraGeometry, materials.selfieCamera);
             selfieCamera.position.set(punchHoleX, punchHoleY, frontCameraZ);
-            tablet.add(selfieCamera); // Add to tablet group
+            tablet.add(selfieCamera);
 
-            // Create Widget function (mostly unchanged logic, just uses tablet materials)
+            // Create Widget function - Green Theme
             const createWidget = (x: number, y: number, w: number, h: number, index: number) => {
                 const widgetGroup = new THREE.Group();
                 widgetGroup.position.set(x, y, widgetZ);
 
-                // Widget Background - Adjusted colors
+                // Widget Background - Adjusted colors - Green Theme
                 const widgetShape = createRoundedRectShape(w, h, widgetCornerRadius);
                 const widgetGeometry = new THREE.ShapeGeometry(widgetShape);
                 const widgetMaterial = new THREE.MeshStandardMaterial({
-                    color: isDarkMode ? 0x303045 : 0xfcfcff, // Cooler dark, lighter light
-                    roughness: 0.4, // Smoother
+                    color: isDarkMode ? 0x304530 : 0xfcfffc, // Greenish widget
+                    roughness: 0.4,
                     metalness: 0.0,
                     side: THREE.FrontSide,
                     transparent: true,
-                    opacity: 0.88, // Slightly more transparent
-                    emissive: isDarkMode ? 0x14141f : 0x000000,
+                    opacity: 0.88,
+                    emissive: isDarkMode ? 0x141f14 : 0x000000,
                     emissiveIntensity: isDarkMode ? 0.15 : 0,
                 });
                 const widgetBg = new THREE.Mesh(widgetGeometry, widgetMaterial);
@@ -450,19 +448,19 @@ export default function Tablet() {
                 widgetBg.receiveShadow = true;
                 widgetGroup.add(widgetBg);
 
-                // Widget Title
-                const titles = ["Temperature", "Humidity", "Light Level", "Energy Usage", "Device Status", "Network Traffic", "Air Quality", "System Load"]; // Added more titles
+                // Widget Title - Green Theme
+                const titles = ["Temperature", "Humidity", "Light Level", "Energy Usage", "Device Status", "Network Traffic", "Air Quality", "System Load"];
                 const titleText = titles[index % titles.length] || `Sensor ${index + 1}`;
-                const titleHeight = 0.3; // Slightly larger title text area
-                const titleWidth = w * 0.75; // Wider title area
+                const titleHeight = 0.3;
+                const titleWidth = w * 0.75;
                 const titleGeometry = new THREE.PlaneGeometry(titleWidth, titleHeight);
                 const titleMaterial = materials.textElement.clone();
-                titleMaterial.color.set(isDarkMode ? 0xddddff : 0x333333); // Adjusted colors
-                titleMaterial.emissive.set(isDarkMode ? 0xaaaacc : 0x000000);
+                titleMaterial.color.set(isDarkMode ? 0xddffdd : 0x333333); // Greenish title
+                titleMaterial.emissive.set(isDarkMode ? 0xaaccaa : 0x000000);
                 titleMaterial.emissiveIntensity = isDarkMode ? 0.3 : 0;
                 titleMaterial.side = THREE.FrontSide;
                 const titleMesh = new THREE.Mesh(titleGeometry, titleMaterial);
-                titleMesh.position.set(0, h / 2 - titleHeight / 2 - 0.2, widgetContentZ - widgetZ); // Adjusted Y position
+                titleMesh.position.set(0, h / 2 - titleHeight / 2 - 0.2, widgetContentZ - widgetZ);
                 widgetGroup.add(titleMesh);
 
                 // --- Widget Data Area - Generate different content based on index ---
@@ -480,9 +478,7 @@ export default function Tablet() {
 
                 const widgetType = index % titles.length;
 
-                // --- Switch statement for widget types (same logic, uses updated materials) ---
-                // (Code for switch statement is identical to smartphone, just uses tablet materials implicitly)
-                // ... (Keep the switch statement code here) ...
+                // --- Switch statement for widget types - Update colors for Green Theme ---
                 switch (widgetType) {
                     case 0: // Temperature - Line Graph Simulation
                         const points = [];
@@ -493,17 +489,17 @@ export default function Tablet() {
                             points.push(new THREE.Vector3(px, py, 0));
                         }
                         const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
-                        const lineMaterial = new THREE.LineBasicMaterial({ color: isDarkMode ? 0xffaaaa : 0xcc0000, linewidth: 2 }); // Adjusted color
+                        const lineMaterial = new THREE.LineBasicMaterial({ color: isDarkMode ? 0xffaaaa : 0xcc0000, linewidth: 2 }); // Keep red for temp
                         const line = new THREE.Line(lineGeometry, lineMaterial);
                         line.position.set(dataAreaX, dataAreaY, contentZ);
                         widgetGroup.add(line);
                         break;
 
-                    case 1: // Humidity - Gauge Simulation (Arc)
+                    case 1: // Humidity - Gauge Simulation (Arc) - Use Chart Element Color
                         const gaugeRadius = dataAreaHeight * 0.6;
                         const arcPercentage = seededRandom();
                         const arcGeometry = new THREE.RingGeometry(gaugeRadius * 0.8, gaugeRadius, 32, 1, 0, Math.PI * arcPercentage);
-                        const arcMaterial = materials.chartElement.clone(); // Uses tablet chartElement
+                        const arcMaterial = materials.chartElement.clone(); // Use green/yellow chart color
                         arcMaterial.side = THREE.DoubleSide;
                         const arcMesh = new THREE.Mesh(arcGeometry, arcMaterial);
                         arcMesh.position.set(dataAreaX, dataAreaY - gaugeRadius * 0.2, contentZ);
@@ -511,30 +507,30 @@ export default function Tablet() {
                         widgetGroup.add(arcMesh);
                         // Add background arc
                         const bgArcGeometry = new THREE.RingGeometry(gaugeRadius * 0.8, gaugeRadius, 32, 1, 0, Math.PI);
-                        const bgArcMaterial = new THREE.MeshStandardMaterial({ color: isDarkMode ? 0x333355 : 0xcccccc, side: THREE.DoubleSide, opacity: 0.3, transparent: true }); // Adjusted color
+                        const bgArcMaterial = new THREE.MeshStandardMaterial({ color: isDarkMode ? 0x335533 : 0xcccccc, side: THREE.DoubleSide, opacity: 0.3, transparent: true }); // Dark green bg
                         const bgArcMesh = new THREE.Mesh(bgArcGeometry, bgArcMaterial);
                         bgArcMesh.position.copy(arcMesh.position);
                         bgArcMesh.rotation.copy(arcMesh.rotation);
                         widgetGroup.add(bgArcMesh);
                         break;
 
-                    case 2: // Light Level - Radial Indicator
+                    case 2: // Light Level - Radial Indicator - Yellow
                         const indicatorRadius = dataAreaHeight * 0.5;
                         const lightLevel = seededRandom();
                         const indicatorGeometry = new THREE.CircleGeometry(indicatorRadius * lightLevel, 32);
-                        const indicatorMaterial = new THREE.MeshBasicMaterial({ color: isDarkMode ? 0xffffcc : 0xffcc00 }); // Adjusted color
+                        const indicatorMaterial = new THREE.MeshBasicMaterial({ color: isDarkMode ? 0xffffcc : 0xffcc00 }); // Keep yellow
                         const indicatorMesh = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
                         indicatorMesh.position.set(dataAreaX, dataAreaY, contentZ);
                         widgetGroup.add(indicatorMesh);
                         // Add outer ring
                         const ringGeometry = new THREE.RingGeometry(indicatorRadius * 0.95, indicatorRadius, 32);
-                        const ringMaterial = new THREE.MeshBasicMaterial({ color: isDarkMode ? 0xaaaaaa : 0x888888, side: THREE.DoubleSide }); // Adjusted color
+                        const ringMaterial = new THREE.MeshBasicMaterial({ color: isDarkMode ? 0xaaaa88 : 0x888888, side: THREE.DoubleSide }); // Yellowish grey
                         const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
                         ringMesh.position.copy(indicatorMesh.position);
                         widgetGroup.add(ringMesh);
                         break;
 
-                    case 3: // Energy Usage - Stacked Bars Simulation
+                    case 3: // Energy Usage - Stacked Bars Simulation - Use Graph/Chart Colors
                         const barCountEnergy = 3;
                         const barWidthEnergy = dataAreaWidth / (barCountEnergy * 1.8);
                         const barSpacingEnergy = barWidthEnergy * 0.8;
@@ -543,32 +539,32 @@ export default function Tablet() {
                             const height1 = seededRandom(i) * maxTotalHeight * 0.6;
                             const height2 = seededRandom(i + 10) * maxTotalHeight * 0.4;
                             const geom1 = new THREE.BoxGeometry(barWidthEnergy, height1, 0.01);
-                            const mat1 = materials.graphElement.clone(); // Uses tablet graphElement
+                            const mat1 = materials.graphElement.clone(); // Use main green graph color
                             const mesh1 = new THREE.Mesh(geom1, mat1);
                             const barX = -dataAreaWidth / 2 + barWidthEnergy / 2 + i * (barWidthEnergy + barSpacingEnergy);
                             mesh1.position.set(barX, dataAreaY - dataAreaHeight / 2 + height1 / 2, contentZ);
                             widgetGroup.add(mesh1);
 
                             const geom2 = new THREE.BoxGeometry(barWidthEnergy, height2, 0.01);
-                            const mat2 = materials.chartElement.clone(); // Uses tablet chartElement
+                            const mat2 = materials.chartElement.clone(); // Use contrasting green/yellow chart color
                             const mesh2 = new THREE.Mesh(geom2, mat2);
                             mesh2.position.set(barX, mesh1.position.y + height1 / 2 + height2 / 2, contentZ);
                             widgetGroup.add(mesh2);
                         }
                         break;
 
-                    case 4: // Device Status - Text/Indicator Simulation
+                    case 4: // Device Status - Text/Indicator Simulation - Use Status Colors
                         const statusCount = 3;
                         const statusHeight = dataAreaHeight / statusCount * 0.6;
                         const statusWidth = dataAreaWidth * 0.8;
                         const statusSpacing = (dataAreaHeight - (statusHeight * statusCount)) / (statusCount + 1);
                         const statuses = ["Online", "Scanning", "Idle"];
-                        const statusColors = [0x88ff88, 0xffff88, 0xaaaaff]; // Adjusted colors
+                        const statusColors = [0x88ff88, 0xffff88, 0xaaaaff]; // Keep these distinct colors
 
                         for (let i = 0; i < statusCount; i++) {
                             const planeGeom = new THREE.PlaneGeometry(statusWidth, statusHeight);
-                            const planeMat = materials.textElement.clone(); // Uses tablet textElement
-                            planeMat.color.set(isDarkMode ? 0xbbbbcc : 0x555555); // Adjusted color
+                            const planeMat = materials.textElement.clone();
+                            planeMat.color.set(isDarkMode ? 0xaaaaaa : 0x555555); // Grey background for text simulation
                             const planeMesh = new THREE.Mesh(planeGeom, planeMat);
                             const planeY = dataAreaY + dataAreaHeight / 2 - statusSpacing * (i + 1) - statusHeight * (i + 0.5);
                             planeMesh.position.set(dataAreaX, planeY, contentZ);
@@ -583,7 +579,7 @@ export default function Tablet() {
                         }
                         break;
 
-                    case 5: // Network Traffic - Dual Line Graph Simulation
+                    case 5: // Network Traffic - Dual Line Graph Simulation - Use Graph/Accent Colors
                         const pointsUp: THREE.Vector3[] = [];
                         const pointsDown: THREE.Vector3[] = [];
                         const segmentsNet = 10;
@@ -595,36 +591,35 @@ export default function Tablet() {
                             pointsDown.push(new THREE.Vector3(px, pyDown, 0));
                         }
                         const lineGeomUp = new THREE.BufferGeometry().setFromPoints(pointsUp);
-                        const lineMatUp = new THREE.LineBasicMaterial({ color: isDarkMode ? 0x88ff88 : 0x00aa00, linewidth: 2 }); // Adjusted color
+                        const lineMatUp = new THREE.LineBasicMaterial({ color: isDarkMode ? 0x88ff88 : 0x00aa00, linewidth: 2 }); // Lighter green
                         const lineUp = new THREE.Line(lineGeomUp, lineMatUp);
                         lineUp.position.set(dataAreaX, dataAreaY, contentZ);
                         widgetGroup.add(lineUp);
 
                         const lineGeomDown = new THREE.BufferGeometry().setFromPoints(pointsDown);
-                        const lineMatDown = new THREE.LineBasicMaterial({ color: isDarkMode ? 0x88aaff : 0x0066cc, linewidth: 2 }); // Adjusted color
+                        const lineMatDown = new THREE.LineBasicMaterial({ color: isDarkMode ? 0x66ffaa : 0x00aa66, linewidth: 2 }); // Use accent green
                         const lineDown = new THREE.Line(lineGeomDown, lineMatDown);
                         lineDown.position.set(dataAreaX, dataAreaY, contentZ);
                         widgetGroup.add(lineDown);
                         break;
-                    // Add cases for new widget types if needed (Air Quality, System Load)
-                    case 6: // Air Quality - Simple Bar
+                    case 6: // Air Quality - Simple Bar - Orange/Yellow
                         const airQualityValue = seededRandom();
                         const aqBarWidth = dataAreaWidth * 0.8;
                         const aqBarHeight = dataAreaHeight * 0.3;
                         const aqGeom = new THREE.BoxGeometry(aqBarWidth * airQualityValue, aqBarHeight, 0.01);
                         const aqMat = materials.graphElement.clone();
-                        aqMat.color.set(isDarkMode ? 0xffcc66 : 0xcc8800); // Orange/Yellow tones
+                        aqMat.color.set(isDarkMode ? 0xffcc66 : 0xcc8800); // Keep Orange/Yellow tones
                         const aqMesh = new THREE.Mesh(aqGeom, aqMat);
                         aqMesh.position.set(dataAreaX - (aqBarWidth * (1-airQualityValue))/2, dataAreaY, contentZ); // Align left
                         widgetGroup.add(aqMesh);
                          // Add background bar
                         const bgAqGeom = new THREE.BoxGeometry(aqBarWidth, aqBarHeight, 0.01);
-                        const bgAqMat = new THREE.MeshStandardMaterial({ color: isDarkMode ? 0x443322 : 0xddccaa, side: THREE.FrontSide, opacity: 0.3, transparent: true });
+                        const bgAqMat = new THREE.MeshStandardMaterial({ color: isDarkMode ? 0x443322 : 0xddccaa, side: THREE.FrontSide, opacity: 0.3, transparent: true }); // Dark orange bg
                         const bgAqMesh = new THREE.Mesh(bgAqGeom, bgAqMat);
                         bgAqMesh.position.set(dataAreaX, dataAreaY, contentZ - 0.0001); // Slightly behind
                         widgetGroup.add(bgAqMesh);
                         break;
-                    case 7: // System Load - Multiple small bars
+                    case 7: // System Load - Multiple small bars - Use Chart Color
                         const loadBarCount = 5;
                         const loadBarWidth = dataAreaWidth / (loadBarCount * 1.5);
                         const loadBarSpacing = loadBarWidth * 0.5;
@@ -632,8 +627,7 @@ export default function Tablet() {
                          for (let i = 0; i < loadBarCount; i++) {
                             const loadHeight = seededRandom(i) * maxLoadHeight;
                             const loadGeom = new THREE.BoxGeometry(loadBarWidth, loadHeight, 0.01);
-                            const loadMat = materials.chartElement.clone();
-                            loadMat.color.set(isDarkMode ? 0xcc88ff : 0x8844cc); // Purple tones
+                            const loadMat = materials.chartElement.clone(); // Use green/yellow chart color
                             const loadMesh = new THREE.Mesh(loadGeom, loadMat);
                             const loadBarX = -dataAreaWidth / 2 + loadBarWidth / 2 + i * (loadBarWidth + loadBarSpacing);
                             loadMesh.position.set(loadBarX, dataAreaY - dataAreaHeight / 2 + loadHeight / 2, contentZ);
@@ -646,17 +640,16 @@ export default function Tablet() {
                 }
 
 
-                // Widget Status/Icon Area - Adjusted size and colors
-                const statusRadius = 0.2; // Larger status indicator
+                // Widget Status/Icon Area - Keep multi-color for now
+                const statusRadius = 0.2;
                 const statusGeometry = new THREE.CircleGeometry(statusRadius, 16);
-                const statusMaterial = materials.accent.clone(); // Use tablet accent
-                const statusColorsCycle = [0xff8888, 0x88ff88, 0x8888ff, 0xffff88, 0xff88ff, 0x88ffff]; // Adjusted colors
+                const statusMaterial = materials.accent.clone(); // Start with accent
+                const statusColorsCycle = [0xff8888, 0x88ff88, 0x8888ff, 0xffff88, 0xff88ff, 0x88ffff]; // Keep distinct colors
                 statusMaterial.color.set(statusColorsCycle[index % statusColorsCycle.length]);
                 statusMaterial.emissive.set(statusColorsCycle[index % statusColorsCycle.length]);
                 statusMaterial.emissiveIntensity = isDarkMode ? 0.4 : 0.1;
                 statusMaterial.side = THREE.FrontSide;
                 const statusMesh = new THREE.Mesh(statusGeometry, statusMaterial);
-                // Adjusted position for larger widget/radius
                 statusMesh.position.set(-w / 2 + statusRadius + 0.15, -h / 2 + statusRadius + 0.15, widgetContentZ - widgetZ);
                 widgetGroup.add(statusMesh);
 
@@ -775,7 +768,7 @@ export default function Tablet() {
             const flashGeometry = new THREE.CylinderGeometry(flashSize, flashSize, flashDepth, 32);
             flashGeometry.rotateX(Math.PI / 2);
             const flashMaterial = new THREE.MeshStandardMaterial({
-                color: 0xffffdd,
+                color: 0xffffdd, // Keep flash color yellowish
                 emissive: 0xaaaa88,
                 emissiveIntensity: 0.2,
                 roughness: 0.3
@@ -792,7 +785,7 @@ export default function Tablet() {
             // Add inner flash detail
             const flashDetailGeometry = new THREE.CircleGeometry(flashDetailSize, 32);
             const flashDetailMaterial = materials.cameraLens.clone(); // Use tablet cameraLens
-            flashDetailMaterial.color.set(0xeeeecc);
+            flashDetailMaterial.color.set(0xeeeecc); // Keep yellowish
             flashDetailMaterial.emissive.set(0xffffaa);
             flashDetailMaterial.emissiveIntensity = 0.5;
             const flashDetail = new THREE.Mesh(flashDetailGeometry, flashDetailMaterial);
@@ -803,7 +796,7 @@ export default function Tablet() {
 
             // Flash rim
             const flashRimGeometry = new THREE.RingGeometry(flashSize, flashSize + 0.04, 32); // Slightly thicker rim
-            const flashRim = new THREE.Mesh(flashRimGeometry, materials.camera); // Use tablet camera material
+            const flashRim = new THREE.Mesh(flashRimGeometry, materials.camera); // Use tablet camera material (greenish tint)
             flashRim.renderOrder = 2;
             const flashRimZ = flashDetailZ - 0.0005;
             flashRim.position.set(flashX, flashY, flashRimZ);
@@ -813,7 +806,7 @@ export default function Tablet() {
             const logoWidth = 2.0; // Larger logo
             const logoHeight = 1.0;
             const logoGeometry = new THREE.PlaneGeometry(logoWidth, logoHeight);
-            const logoMaterial = materials.accent.clone(); // Use tablet accent material
+            const logoMaterial = materials.accent.clone(); // Use tablet accent material (green)
             logoMaterial.side = THREE.FrontSide;
             const logo = new THREE.Mesh(logoGeometry, logoMaterial);
             logo.position.set(0, -height / 5, backSurfaceZ - backElementOffset - 0.001); // Adjusted Y position
@@ -824,7 +817,7 @@ export default function Tablet() {
                 const buttonDepth = 0.1;
                 const buttonWidth = 0.3; // Slightly wider buttons
                 const buttonGeometry = new THREE.BoxGeometry(buttonDepth, h, buttonWidth); // Use buttonWidth for Z dimension
-                const button = new THREE.Mesh(buttonGeometry, materials.buttons); // Use tablet buttons material
+                const button = new THREE.Mesh(buttonGeometry, materials.buttons); // Use tablet buttons material (green)
                 const x = isRight ? width / 2 : -width / 2;
                 button.position.set(x + (isRight ? buttonDepth / 2 : -buttonDepth / 2), y, 0);
                 button.castShadow = true;
@@ -840,7 +833,7 @@ export default function Tablet() {
                 const portDepth = 0.1;
                 const portHeight = 0.1; // Slightly taller port
                 const portGeometry = new THREE.BoxGeometry(w, portHeight, portDepth);
-                const port = new THREE.Mesh(portGeometry, materials.port); // Use tablet port material
+                const port = new THREE.Mesh(portGeometry, materials.port); // Use tablet port material (neutral grey)
                 port.position.set(x, -height / 2, -portDepth / 2);
                 tablet.add(port); // Add to tablet group
             };
@@ -924,21 +917,21 @@ export default function Tablet() {
         updateMaterials(isDarkMode);
         // Update lights based on dark mode
         if (sceneRef.current) {
-            sceneRef.current.background = new THREE.Color(isDarkMode ? 0x080812 : 0xf0f0f0);
+            sceneRef.current.background = new THREE.Color(isDarkMode ? 0x081208 : 0xf0f4f0); // Green tint
             sceneRef.current.traverse((object) => {
                 if (object instanceof THREE.AmbientLight) {
-                    object.color.set(isDarkMode ? 0x444455 : 0x909090);
+                    object.color.set(isDarkMode ? 0x445544 : 0x909090); // Greenish ambient
                     object.intensity = isDarkMode ? 0.4 : 0.8;
                 } else if (object instanceof THREE.DirectionalLight) {
                     if (object.position.x > 0) { // Main directional light
-                        object.color.set(isDarkMode ? 0xaaccff : 0xffffff);
+                        object.color.set(isDarkMode ? 0xaaffcc : 0xffffff); // Greenish directional
                         object.intensity = isDarkMode ? 0.7 : 0.9;
                     } else { // Backlight
-                        object.color.set(isDarkMode ? 0x4466aa : 0xddeeff);
+                        object.color.set(isDarkMode ? 0x44aa66 : 0xddffee); // Greenish backlight
                         object.intensity = isDarkMode ? 0.3 : 0.3;
                     }
                 } else if (object instanceof THREE.SpotLight) { // Screen light
-                    object.color.set(isDarkMode ? 0x88ccff : 0xffffff);
+                    object.color.set(isDarkMode ? 0x88ffcc : 0xffffff); // Greenish screen light
                     object.intensity = isDarkMode ? 0.6 : 0.4;
                 }
             });
@@ -946,19 +939,19 @@ export default function Tablet() {
     }, [isDarkMode]);
 
     return (
-        // Adjusted background color for tablet dark mode
-        <div style={{ background: isDarkMode ? '#080812' : '#f0f0f0', height: '100vh', width: '100vw' }}>
+        // Adjusted background color for tablet dark mode - Green Theme
+        <div style={{ background: isDarkMode ? '#081208' : '#f0f4f0', height: '100vh', width: '100vw' }}>
             <div ref={mountRef} style={{ width: '100%', height: '100vh' }} />
-            {/* Updated info box text */}
+            {/* Updated info box text and style - Green Theme */}
             <div className="info" style={{
                 position: 'absolute',
                 top: '10px',
                 left: '10px',
                 padding: '10px',
-                background: isDarkMode ? 'rgba(20,20,40,0.7)' : 'rgba(255,255,255,0.7)', // Adjusted dark bg
-                color: isDarkMode ? '#aabbff' : '#333', // Adjusted dark text
+                background: isDarkMode ? 'rgba(20,40,20,0.7)' : 'rgba(255,255,255,0.7)', // Greenish dark bg
+                color: isDarkMode ? '#aaffaa' : '#333', // Greenish dark text
                 borderRadius: '4px',
-                boxShadow: isDarkMode ? '0 0 8px #4488ff' : '0 0 5px rgba(0,0,0,0.2)', // Adjusted dark shadow
+                boxShadow: isDarkMode ? '0 0 8px #00aa66' : '0 0 5px rgba(0,0,0,0.2)', // Green shadow
             }}>
                 <p>Modern Tablet with IoT Control Dashboard</p> {/* Updated text */}
                 <p>Press W to toggle wireframe mode</p>
@@ -967,14 +960,14 @@ export default function Tablet() {
                 <button
                     onClick={toggleDarkMode}
                     style={{
-                        background: isDarkMode ? '#004499' : '#2266cc', // Adjusted dark button bg
+                        background: isDarkMode ? '#009966' : '#22aa88', // Green button bg
                         color: 'white',
                         border: 'none',
                         padding: '5px 10px',
                         borderRadius: '4px',
                         cursor: 'pointer',
                         marginTop: '5px',
-                        boxShadow: isDarkMode ? '0 0 5px #4488ff' : 'none', // Adjusted dark button shadow
+                        boxShadow: isDarkMode ? '0 0 5px #00aa66' : 'none', // Green button shadow
                     }}
                 >
                     {isDarkMode ? 'Light Mode' : 'Dark Mode'}
