@@ -323,7 +323,9 @@ export default function SmartPhone() {
             const height = 14;
             const width = 7;
             const thickness = 0.8;
-            const cornerRadius = 0.7; // Rounded corners
+            const cornerRadius = 0.7; // Rounded corners for phone body
+            const screenCornerRadius = 0.5; // Slightly smaller radius for screen/dashboard
+            const widgetCornerRadius = 0.2; // Radius for widgets
             const bevelSize = 0.1; // Consistent bevel size
 
             // Main phone body with rounded corners
@@ -360,368 +362,184 @@ export default function SmartPhone() {
             phoneBody.position.set(0, 0, 0); 
             phone.add(phoneBody);
             
-            // --- Screen and UI Layering Fix ---
-            // Increase Z offsets slightly to avoid z-fighting with the body
+            // --- Screen and UI Layering ---
             const screenHeight = height - 0.4;
             const screenWidth = width - 0.3;
-            const screenSurfaceZ = thickness / 2 + 0.005; // Increased offset
-            const frontCameraZ = screenSurfaceZ + 0.001; 
-            const uiElementZ = screenSurfaceZ + 0.002; 
-            const panelZ = uiElementZ + 0.001; // Define panelZ once here
+            const screenSurfaceZ = thickness / 2 + 0.01; // Base Z for screen elements
+            const dashboardBgZ = screenSurfaceZ + 0.001; // Dashboard background slightly above screen
+            const widgetZ = dashboardBgZ + 0.002; // Widgets above dashboard background
+            const widgetContentZ = widgetZ + 0.001; // Text/icons on widgets
+            // Remove notchZ
+            const frontCameraZ = dashboardBgZ + 0.005; // Camera slightly above dashboard bg
 
-            const screenShape = new THREE.Shape();
-             // Define screen shape centered around (0,0)
-            screenShape.moveTo(-screenWidth / 2 + cornerRadius, -screenHeight / 2);
-            screenShape.lineTo(screenWidth / 2 - cornerRadius, -screenHeight / 2);
-            screenShape.quadraticCurveTo(screenWidth / 2, -screenHeight / 2, screenWidth / 2, -screenHeight / 2 + cornerRadius);
-            screenShape.lineTo(screenWidth / 2, screenHeight / 2 - cornerRadius);
-            screenShape.quadraticCurveTo(screenWidth / 2, screenHeight / 2, screenWidth / 2 - cornerRadius, screenHeight / 2);
-            screenShape.lineTo(-screenWidth / 2 + cornerRadius, screenHeight / 2);
-            screenShape.quadraticCurveTo(-screenWidth / 2, screenHeight / 2, -screenWidth / 2, screenHeight / 2 - cornerRadius);
-            screenShape.lineTo(-screenWidth / 2, -screenHeight / 2 + cornerRadius);
-            screenShape.quadraticCurveTo(-screenWidth / 2, -screenHeight / 2, -screenWidth / 2 + cornerRadius, -screenHeight / 2);
-            
-            // Create a hole for the notch
-            const notchWidth = 1.5;
-            const notchHeight = 0.5;
-            const notchShape = new THREE.Shape();
-            // Define notch shape relative to screen center
-            notchShape.moveTo(-notchWidth/2, screenHeight/2);
-            notchShape.lineTo(notchWidth/2, screenHeight/2);
-            notchShape.lineTo(notchWidth/2, screenHeight/2 - notchHeight);
-            notchShape.bezierCurveTo(
-                notchWidth/2 - 0.2, screenHeight/2 - notchHeight - 0.1,
-                -notchWidth/2 + 0.2, screenHeight/2 - notchHeight - 0.1,
-                -notchWidth/2, screenHeight/2 - notchHeight
-            );
-            notchShape.lineTo(-notchWidth/2, screenHeight/2);
-            screenShape.holes.push(notchShape);
-            
-            // Use PlaneGeometry for the screen surface, positioned exactly
-            const screenGeometry = new THREE.ShapeGeometry(screenShape);
-            const screen = new THREE.Mesh(screenGeometry, materials.screen);
-            screen.position.z = screenSurfaceZ; 
-            phone.add(screen);
-            
-            // Notch fill, positioned exactly at the screen surface
-            const notchGeometry = new THREE.ShapeGeometry(notchShape);
-            const notch = new THREE.Mesh(notchGeometry, materials.notch);
-            notch.position.z = screenSurfaceZ;
-            phone.add(notch);
-            
-            // --- Front Camera Visibility Fix ---
-            const selfieCameraGeometry = new THREE.CircleGeometry(0.25, 32);
-            const selfieCamera = new THREE.Mesh(selfieCameraGeometry, materials.selfieCamera);
-            selfieCamera.position.set(0, screenHeight/2 - 0.25, frontCameraZ);
-            phone.add(selfieCamera);
-            
-            const depthSensorGeometry = new THREE.CircleGeometry(0.12, 32);
-            const depthSensor = new THREE.Mesh(depthSensorGeometry, materials.cameraLens);
-            depthSensor.position.set(0.4, screenHeight/2 - 0.25, frontCameraZ);
-            phone.add(depthSensor);
-            
-            // --- UI Element Layering Fix ---
-            const createUIElement = (x: number, y: number, w: number, h: number, material: THREE.Material) => {
-                const uiGeometry = new THREE.PlaneGeometry(w, h);
-                const uiElement = new THREE.Mesh(uiGeometry, material);
-                uiElement.position.set(x, y, uiElementZ); // Use consistent Z
-                return uiElement;
-            };
-            
-            // Create text element (simulated) - ensure correct Z
-            const createTextElement = (x: number, y: number, width: number, height: number) => {
-                const textGroup = new THREE.Group();
-                const lineHeight = 0.12;
-                const marginTop = 0.1;
-                const numLines = Math.floor((height - marginTop) / (lineHeight * 1.5));
-                const textLineZ = uiElementZ + 0.001; // Slightly above UI background
+            // --- IoT Dashboard Design ---
 
-                for (let i = 0; i < numLines; i++) {
-                    const lineWidth = width * (0.7 + Math.random() * 0.3);
-                    const lineGeometry = new THREE.PlaneGeometry(lineWidth, lineHeight);
-                    const line = new THREE.Mesh(lineGeometry, materials.textElement);
-                    line.position.set(
-                        x + (width - lineWidth) / 2 - width/2, // Adjust x for centering
-                        y + height/2 - marginTop - i * lineHeight * 1.5 - lineHeight/2, // Adjust y for centering
-                        textLineZ
-                    );
-                    textGroup.add(line);
-                }
-                return textGroup;
+            // Helper function to create rounded rectangle shapes
+            const createRoundedRectShape = (w: number, h: number, r: number) => {
+                const shape = new THREE.Shape();
+                shape.moveTo(-w / 2 + r, -h / 2);
+                shape.lineTo(w / 2 - r, -h / 2);
+                shape.quadraticCurveTo(w / 2, -h / 2, w / 2, -h / 2 + r);
+                shape.lineTo(w / 2, h / 2 - r);
+                shape.quadraticCurveTo(w / 2, h / 2, w / 2 - r, h / 2);
+                shape.lineTo(-w / 2 + r, h / 2);
+                shape.quadraticCurveTo(-w / 2, h / 2, -w / 2, h / 2 - r);
+                shape.lineTo(-w / 2, -h / 2 + r);
+                shape.quadraticCurveTo(-w / 2, -h / 2, -w / 2 + r, -h / 2);
+                return shape;
             };
-            
-            // Status bar
-            const statusBar = createUIElement(0, screenHeight / 2 - 0.25, screenWidth, 0.5, materials.uiElement);
-            phone.add(statusBar);
-            
-            // Status icons (battery, wifi, signal)
-            const iconSize = 0.2;
-            const iconSpacing = 0.4;
-            for (let i = 0; i < 3; i++) {
-                const icon = createUIElement(
-                    screenWidth / 2 - 0.5 - i * iconSpacing, 
-                    screenHeight / 2 - 0.25, 
-                    iconSize, 
-                    iconSize, 
-                    materials.accent
-                );
-                phone.add(icon);
-            }
-            
-            // Main dashboard area
-            const dashboardWidth = screenWidth - 0.5;
-            const dashboardHeight = 5.5;
-            const dashboardY = screenHeight / 2 - dashboardHeight / 2 - 1;
+
+            // Dashboard Background
+            const dashboardWidth = screenWidth - 0.2; // Slightly inset
+            const dashboardHeight = screenHeight - 0.2; // Slightly inset
+            const dashboardShape = createRoundedRectShape(dashboardWidth, dashboardHeight, screenCornerRadius);
+
+            // Create a hole for the punch-hole camera
+            const punchHoleRadius = 0.25;
+            const punchHoleX = 0; // Centered horizontally
+            const punchHoleY = dashboardHeight / 2 - 0.4; // Position near the top
+
+            const punchHolePath = new THREE.Path();
+            punchHolePath.absarc(punchHoleX, punchHoleY, punchHoleRadius, 0, Math.PI * 2, false);
+            dashboardShape.holes.push(punchHolePath); // Add the punch hole
+
             const dashboardMaterial = new THREE.MeshStandardMaterial({
-                // ... dashboard material properties ...
-                color: isDarkMode ? 0x003322 : 0xeeffff,
-                roughness: 0.3,
-                metalness: 0.2,
+                color: isDarkMode ? 0x08241a : 0xe0f4e8, // Slightly adjusted colors
+                roughness: 0.5, // Slightly less rough
+                metalness: 0.05, // Slightly less metallic
+                side: THREE.FrontSide,
                 transparent: true,
-                opacity: 0.85,
-                emissive: isDarkMode ? 0x001a11 : 0x000000,
-                emissiveIntensity: isDarkMode ? 0.3 : 0,
-                side: THREE.FrontSide // Ensure it only renders on the front
+                opacity: 0.98, // Slightly more opaque
+                emissive: isDarkMode ? 0x000502 : 0x000000, // Very subtle dark mode glow
+                emissiveIntensity: isDarkMode ? 0.05 : 0,
             });
-            const dashboard = createUIElement(0, dashboardY, dashboardWidth, dashboardHeight, dashboardMaterial);
-            phone.add(dashboard);
-            
-            // --- Graph and Device Status Visibility Fix ---
-            // Temperature graph
-            const createTemperatureGraph = () => {
-                const graph = new THREE.Group();
-                const graphWidth = 3.8;
-                const graphHeight = 2.6;
-                
-                // Graph background
-                const bgGeometry = new THREE.PlaneGeometry(graphWidth, graphHeight);
-                const bgMaterial = new THREE.MeshStandardMaterial({
-                    // ... bg material properties ...
-                    color: isDarkMode ? 0x002a1a : 0xecfff5,
+            const dashboardGeometry = new THREE.ShapeGeometry(dashboardShape);
+            const dashboardBg = new THREE.Mesh(dashboardGeometry, dashboardMaterial);
+            dashboardBg.position.z = dashboardBgZ;
+            phone.add(dashboardBg);
+
+            // Add Dashboard Border (Optional, subtle)
+            const borderPoints = dashboardShape.getPoints(50); // Get points from the shape
+            const borderGeometry = new THREE.BufferGeometry().setFromPoints(borderPoints);
+            const borderMaterial = new THREE.LineBasicMaterial({
+                color: isDarkMode ? 0x226644 : 0xaaaaaa,
+                linewidth: 1, // Note: linewidth > 1 may not work on all platforms
+                transparent: true,
+                opacity: 0.5
+            });
+            const dashboardBorder = new THREE.LineLoop(borderGeometry, borderMaterial); // Use LineLoop for closed shape
+            dashboardBorder.position.z = dashboardBgZ + 0.0001; // Slightly above the background
+            phone.add(dashboardBorder);
+
+            // --- Front Camera ---
+            const selfieCameraGeometry = new THREE.CircleGeometry(punchHoleRadius * 0.9, 32); // Slightly smaller than hole
+            const selfieCamera = new THREE.Mesh(selfieCameraGeometry, materials.selfieCamera);
+            // Position camera within the punch hole area, slightly above the dashboard background
+            selfieCamera.position.set(punchHoleX, punchHoleY, frontCameraZ);
+            phone.add(selfieCamera);
+
+            // Create Widget function
+            const createWidget = (x: number, y: number, w: number, h: number, title: string) => {
+                const widgetGroup = new THREE.Group();
+                widgetGroup.position.set(x, y, widgetZ); // Set base position for the group
+
+                // Widget Background
+                const widgetShape = createRoundedRectShape(w, h, widgetCornerRadius);
+                const widgetGeometry = new THREE.ShapeGeometry(widgetShape);
+                const widgetMaterial = new THREE.MeshStandardMaterial({
+                    color: isDarkMode ? 0x154530 : 0xf8fefc, // Adjusted colors
+                    roughness: 0.3, // Smoother
+                    metalness: 0.0,
+                    side: THREE.FrontSide,
                     transparent: true,
-                    opacity: 0.8,
-                    metalness: 0.1, 
-                    roughness: 0.5,
-                    side: THREE.FrontSide
+                    opacity: 0.85, // Slightly more transparent
+                    emissive: isDarkMode ? 0x081f14 : 0x000000,
+                    emissiveIntensity: isDarkMode ? 0.15 : 0,
                 });
-                const bg = new THREE.Mesh(bgGeometry, bgMaterial);
-                graph.add(bg); // Add background first
-                
-                // Graph title
-                const titleGeometry = new THREE.PlaneGeometry(graphWidth - 0.2, 0.4);
-                const titleMaterial = new THREE.MeshStandardMaterial({
-                    // ... title material properties ...
-                    name: 'text_element',
-                    color: isDarkMode ? 0xeeffee : 0xffffff,
-                    emissive: isDarkMode ? 0xccffcc : 0x000000,
-                    emissiveIntensity: isDarkMode ? 0.7 : 0.0,
-                    metalness: 0.1,
-                    roughness: 0.2,
-                    side: THREE.FrontSide
-                });
-                const title = new THREE.Mesh(titleGeometry, titleMaterial);
-                title.position.y = graphHeight/2 - 0.3; // Position relative to background
-                title.position.z = 0.001; // Slightly above background
-                graph.add(title);
-                
-                // Graph line and points
-                const points = [];
-                const numPoints = 20;
-                const plotWidth = graphWidth - 0.4;
-                const plotHeight = graphHeight - 1.0;
-                
-                for (let i = 0; i < numPoints; i++) {
-                    const x = (i / (numPoints - 1)) * plotWidth - plotWidth / 2;
-                    const y = Math.sin(i * 0.5) * (plotHeight/2.5) + Math.random() * 0.15 - plotHeight/4; // Scale y to fit
-                    points.push(new THREE.Vector2(x, y));
-                }
-                
-                const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
-                const lineMaterial = new THREE.LineBasicMaterial({ color: isDarkMode ? 0x66ffbb : 0x009977 });
-                const line = new THREE.Line(lineGeometry, lineMaterial);
-                line.position.z = 0.002; // Above title
-                graph.add(line);
-                
-                // Add dots
-                for (let i = 0; i < points.length; i += 3) {
-                    const dotGeometry = new THREE.CircleGeometry(0.07, 16);
-                    const dotMaterial = new THREE.MeshStandardMaterial({
-                        // ... dot material properties ...
-                        name: 'graph_element',
-                        color: isDarkMode ? 0x88ffcc : 0x00dd99,
-                        emissive: isDarkMode ? 0x44ffaa : 0x00aa77,
-                        emissiveIntensity: isDarkMode ? 1.0 : 0.5,
-                        metalness: 0.1,
-                        roughness: 0.2,
-                        side: THREE.FrontSide
-                    });
-                    const dot = new THREE.Mesh(dotGeometry, dotMaterial);
-                    dot.position.set(points[i].x, points[i].y, 0.003); // Above line
-                    graph.add(dot);
-                }
-                
-                // Add axis lines
-                const axisMaterial = materials.uiElement.clone();
-                axisMaterial.side = THREE.FrontSide;
-                const xAxisGeometry = new THREE.PlaneGeometry(plotWidth, 0.05);
-                const xAxis = new THREE.Mesh(xAxisGeometry, axisMaterial);
-                xAxis.position.y = -plotHeight/2 - 0.2;
-                xAxis.position.z = 0.001;
-                graph.add(xAxis);
-                
-                const yAxisGeometry = new THREE.PlaneGeometry(0.05, plotHeight);
-                const yAxis = new THREE.Mesh(yAxisGeometry, axisMaterial);
-                yAxis.position.x = -plotWidth/2;
-                yAxis.position.z = 0.001;
-                graph.add(yAxis);
-                
-                return graph;
-            };
-            
-            // Device status indicators
-            const createDeviceStatus = () => {
-                const statusGroup = new THREE.Group();
-                const panelWidth = 3.8;
-                const panelHeight = 2.6;
+                const widgetBg = new THREE.Mesh(widgetGeometry, widgetMaterial);
+                widgetBg.castShadow = false;
+                widgetBg.receiveShadow = true;
+                widgetGroup.add(widgetBg); // Add to group
 
-                // Container
-                const containerGeometry = new THREE.PlaneGeometry(panelWidth, panelHeight);
-                const containerMaterial = new THREE.MeshStandardMaterial({
-                    // ... container material properties ...
-                    color: isDarkMode ? 0x001a33 : 0xf0f8ff,
-                    transparent: true,
-                    opacity: 0.8,
-                    metalness: 0.1,
-                    roughness: 0.5,
-                    side: THREE.FrontSide
-                });
-                const container = new THREE.Mesh(containerGeometry, containerMaterial);
-                statusGroup.add(container); // Add background first
+                // Widget Title (Simulated with a plane - keep simple)
+                const titleHeight = 0.25; // Slightly smaller
+                const titleWidth = w * 0.7;
+                const titleGeometry = new THREE.PlaneGeometry(titleWidth, titleHeight);
+                const titleMaterial = materials.textElement.clone();
+                titleMaterial.color.set(isDarkMode ? 0xccffdd : 0x333333); // Adjust text color
+                titleMaterial.emissive.set(isDarkMode ? 0x88ccaa : 0x000000);
+                titleMaterial.emissiveIntensity = isDarkMode ? 0.3 : 0;
+                titleMaterial.side = THREE.FrontSide;
+                const titleMesh = new THREE.Mesh(titleGeometry, titleMaterial);
+                titleMesh.position.set(0, h / 2 - titleHeight / 2 - 0.15, widgetContentZ - widgetZ); // Adjusted Y
+                widgetGroup.add(titleMesh);
 
-                // Title
-                const titleGeometry = new THREE.PlaneGeometry(panelWidth - 0.2, 0.4);
-                const titleMaterial = new THREE.MeshStandardMaterial({
-                    // ... title material properties ...
-                    name: 'text_element',
-                    color: isDarkMode ? 0xeeffee : 0xffffff,
-                    emissive: isDarkMode ? 0xccffcc : 0x000000,
-                    emissiveIntensity: isDarkMode ? 0.7 : 0.0,
-                    side: THREE.FrontSide
-                });
-                const title = new THREE.Mesh(titleGeometry, titleMaterial);
-                title.position.y = panelHeight/2 - 0.3;
-                title.position.z = 0.001; // Above background
-                statusGroup.add(title);
+                // Widget Data Area (Simulated Bar Chart)
+                const chartAreaHeight = h * 0.4;
+                const chartAreaWidth = w * 0.7;
+                const barCount = 5;
+                const barWidth = chartAreaWidth / (barCount * 1.5); // Bars with spacing
+                const barSpacing = barWidth * 0.5;
+                const maxBarHeight = chartAreaHeight * 0.8;
 
-                // Define interface for device data
-                interface DeviceStatus {
-                    color: number;
-                    status: boolean;
+                for (let i = 0; i < barCount; i++) {
+                    const barHeight = Math.random() * maxBarHeight; // Random height for demo
+                    const barGeometry = new THREE.BoxGeometry(barWidth, barHeight, 0.01); // Very thin box
+                    // Alternate materials for bars
+                    const barMaterial = (i % 2 === 0) ? materials.graphElement.clone() : materials.chartElement.clone();
+                    barMaterial.side = THREE.FrontSide;
+                    const barMesh = new THREE.Mesh(barGeometry, barMaterial);
+                    // Position bars within the data area
+                    const barX = -chartAreaWidth / 2 + barWidth / 2 + i * (barWidth + barSpacing);
+                    const barY = -chartAreaHeight / 2 + barHeight / 2; // Align bottom of bar
+                    barMesh.position.set(barX, barY, widgetContentZ - widgetZ + 0.001); // Slightly above title plane Z
+                    widgetGroup.add(barMesh);
                 }
 
-                // Device circles and indicators
-                const deviceSize = 0.4;
-                const deviceSpacing = 1.0;
-                // Explicitly type the devices array
-                const devices: DeviceStatus[] = [
-                    { color: 0x44ddff, status: true },
-                    { color: 0xffaa44, status: false },
-                    { color: 0x66ffaa, status: true },
-                    { color: 0xff6644, status: true },
-                    { color: 0xaa88ff, status: false },
-                    { color: 0xffdd44, status: true },
-                ];
-                let index = 0;
-                const itemZOffset = 0.002; // Z offset for items above background
+                // Widget Status/Icon Area (Small Circle)
+                const statusRadius = 0.15;
+                const statusGeometry = new THREE.CircleGeometry(statusRadius, 16);
+                const statusMaterial = materials.accent.clone(); // Reuse accent material
+                statusMaterial.side = THREE.FrontSide;
+                const statusMesh = new THREE.Mesh(statusGeometry, statusMaterial);
+                // Position status at the bottom-left, slightly forward
+                statusMesh.position.set(-w / 2 + statusRadius + 0.1, -h / 2 + statusRadius + 0.1, widgetContentZ - widgetZ);
+                widgetGroup.add(statusMesh);
 
-                for (let row = 0; row < 2; row++) {
-                    for (let col = 0; col < 3; col++) {
-                        if (index < devices.length) {
-                            const device = devices[index];
-                            const circleX = (col - 1) * deviceSpacing;
-                            const circleY = (panelHeight/2 - 1.0) - row * deviceSpacing; // Position relative to panel center
-
-                            // Device circle
-                            const circleGeometry = new THREE.CircleGeometry(deviceSize, 32);
-                            const circleMaterial = new THREE.MeshStandardMaterial({
-                                // ... circle material properties ...
-                                color: device.color,
-                                transparent: true,
-                                opacity: 0.9,
-                                emissive: device.color,
-                                emissiveIntensity: isDarkMode ? 0.3 : 0.1,
-                                side: THREE.FrontSide
-                            });
-                            const circle = new THREE.Mesh(circleGeometry, circleMaterial);
-                            circle.position.set(circleX, circleY, itemZOffset);
-                            statusGroup.add(circle);
-
-                            // Status indicator
-                            const statusGeometry = new THREE.CircleGeometry(0.12, 16);
-                            const statusMaterial = new THREE.MeshStandardMaterial({
-                                // ... status material properties ...
-                                color: device.status ? 0x44ff66 : 0xff4422,
-                                emissive: device.status ? 0x22cc44 : 0xcc2211,
-                                emissiveIntensity: isDarkMode ? 0.8 : 0.5,
-                                side: THREE.FrontSide
-                            });
-                            const statusIndicator = new THREE.Mesh(statusGeometry, statusMaterial);
-                            statusIndicator.position.set(circleX + deviceSize * 0.7, circleY + deviceSize * 0.7, itemZOffset + 0.001);
-                            statusGroup.add(statusIndicator);
-
-                            // Label
-                            const labelGeometry = new THREE.PlaneGeometry(deviceSize * 2.0, deviceSize * 0.6);
-                            const labelMaterial = materials.textElement.clone();
-                            labelMaterial.side = THREE.FrontSide;
-                            const label = new THREE.Mesh(labelGeometry, labelMaterial);
-                            label.position.set(circleX, circleY - deviceSize * 0.9, itemZOffset);
-                            statusGroup.add(label);
-                        }
-                        index++;
-                    }
-                }
-                return statusGroup;
+                return widgetGroup;
             };
 
-            // Position panels correctly on the screen surface
-            const panelY = screenHeight/4 - 1;
-            const panelXOffset = screenWidth/4 + 0.2; // Adjust spacing
+            // --- Arrange Widgets ---
+            const padding = 0.2; // Padding around dashboard edges and between widgets
+            const usableWidth = dashboardWidth - padding * 2;
+            const usableHeight = dashboardHeight - padding * 2;
+            const widgetCols = 2;
+            const widgetRows = 3;
+            const widgetWidth = (usableWidth - padding * (widgetCols - 1)) / widgetCols;
+            const widgetHeight = (usableHeight - padding * (widgetRows - 1)) / widgetRows;
 
-            const tempGraph = createTemperatureGraph();
-            tempGraph.position.set(-panelXOffset, panelY, panelZ);
-            phone.add(tempGraph);
-            
-            const deviceStatus = createDeviceStatus();
-            deviceStatus.position.set(panelXOffset, panelY, panelZ);
-            phone.add(deviceStatus);
-            
-            // Text information section
-            const textSection = createTextElement(0, -screenHeight/4 - 0.5, screenWidth - 0.8, 3);
-            phone.add(textSection); // This group already handles internal Z positioning
+            const startX = -usableWidth / 2 + widgetWidth / 2;
+            const startY = usableHeight / 2 - widgetHeight / 2;
 
-            // Bottom navigation bar
-            const navBarMaterial = new THREE.MeshStandardMaterial({ /* ... navBarMaterial properties ... */ });
-            navBarMaterial.side = THREE.FrontSide;
-            const navBarWidth = screenWidth - 0.2;
-            const navBarY = -screenHeight / 2 + 0.5;
-            const navBar = createUIElement(0, navBarY, navBarWidth, 1, navBarMaterial);
-            phone.add(navBar);
-            
-            // Navigation icons
-            const navIconSize = 0.5;
-            const navIcons = 4;
-            const totalNavWidth = (navIcons - 1) * 1.2;
-            const navIconMaterial = materials.accent.clone();
-            navIconMaterial.side = THREE.FrontSide;
-            for (let i = 0; i < navIcons; i++) {
-                const xPos = -totalNavWidth / 2 + i * 1.2;
-                const navIcon = createUIElement(xPos, navBarY, navIconSize, navIconSize, navIconMaterial);
-                phone.add(navIcon);
+            let widgetCount = 0;
+            for (let r = 0; r < widgetRows; r++) {
+                for (let c = 0; c < widgetCols; c++) {
+                    widgetCount++;
+                    const x = startX + c * (widgetWidth + padding);
+                    const y = startY - r * (widgetHeight + padding);
+                    const widget = createWidget(x, y, widgetWidth, widgetHeight, `Widget ${widgetCount}`);
+                    phone.add(widget); // Add widget group directly to the phone
+                }
             }
-            
-            // --- Back Camera Visibility Fix ---
+
+            // --- Remove Old UI Elements ---
+            // The code for statusBar, dashboard, tempGraph, deviceStatus, textSection, navBar, etc.
+            // has been effectively replaced by the new dashboard and widget creation logic above.
+            // No need to explicitly remove them if they are not created.
+
+            // --- Back Camera, Buttons, Ports (Keep Existing) ---
             const backSurfaceZ = -thickness / 2; // Define back surface Z
-            const backElementOffset = 0.01; // Small offset to prevent z-fighting and ensure visibility
+            const backElementOffset = 0.01; // Base offset to prevent z-fighting with back surface
 
             // Camera lenses - Adjusted positioning and ring material
             const addCameraLens = (x: number, y: number, size: number) => {
@@ -730,11 +548,12 @@ export default function SmartPhone() {
                 const lensZOffset = 0.005; // Small offset between elements
 
                 // Calculate Z positions relative to the back surface (more negative is further out)
-                const housingZ = backSurfaceZ - housingDepth / 2 - backElementOffset; // Move housing outwards
-                const ringZ = housingZ - housingDepth / 2 - ringDepth / 2; // Move ring outwards relative to housing
-                const lensZ = ringZ - ringDepth / 2 - lensZOffset; // Move lens outwards relative to ring
-                const innerLensZ = lensZ - lensZOffset; // Move inner lens outwards
-                const highlightZ = innerLensZ - lensZOffset; // Move highlight outwards
+                // Ensure elements are slightly offset from each other and the back surface
+                const housingZ = backSurfaceZ - housingDepth / 2 - backElementOffset; 
+                const ringZ = housingZ - housingDepth / 2 - ringDepth / 2 - 0.001; // Ring slightly behind housing face
+                const lensZ = ringZ - ringDepth / 2 - lensZOffset; 
+                const innerLensZ = lensZ - lensZOffset; 
+                const highlightZ = innerLensZ - lensZOffset; 
 
                 // Housing
                 const housingGeometry = new THREE.CylinderGeometry(size + 0.1, size + 0.1, housingDepth, 32);
@@ -792,9 +611,18 @@ export default function SmartPhone() {
             addCameraLens(cameraClusterX, cameraClusterY - 0.5, 0.4); // Bottom-center lens relative to cluster center
 
             // Flash - Adjusted position for top-left cluster (from front view)
-            const flashSize = 0.3;
-            const flashZ = backSurfaceZ - backElementOffset - 0.01; // Position slightly OUTSIDE back surface
-            const flashGeometry = new THREE.CircleGeometry(flashSize, 32);
+            const flashSize = 0.15; // Further reduced flash radius
+            const flashDepth = 0.05; // Give the flash some thickness
+            const flashDetailSize = flashSize * 0.6; // Size of the inner detail
+            const flashDetailOffset = 0.002; // How far detail sits in front of flash face
+
+            // Position the CENTER of the flash cylinder slightly proud of the back surface
+            const flashBaseZ = backSurfaceZ - backElementOffset - 0.005; // Base Z for flash elements
+            const flashZ = flashBaseZ - flashDepth / 2; // Center of the cylinder
+            // Use CylinderGeometry for thickness
+            const flashGeometry = new THREE.CylinderGeometry(flashSize, flashSize, flashDepth, 32);
+            flashGeometry.rotateX(Math.PI / 2); // Rotate so flat face points outwards
+            // Revert to original material
             const flashMaterial = new THREE.MeshStandardMaterial({
                 color: 0xffffdd,
                 emissive: 0xaaaa88,
@@ -802,15 +630,35 @@ export default function SmartPhone() {
                 roughness: 0.3
              });
             const flash = new THREE.Mesh(flashGeometry, flashMaterial);
-            // Adjust flash position relative to the new cluster center
-            flash.position.set(cameraClusterX + 0.8, cameraClusterY - 0.5, flashZ);
+            flash.castShadow = false; // Disable shadow casting for flash
+            flash.renderOrder = 1; // Ensure flash renders after phone body
+            // Adjust flash position: Left of cluster, aligned with bottom lens
+            const flashX = cameraClusterX - 1.0; // Move further left
+            const flashY = cameraClusterY - 0.5; // Align with bottom lens
+            flash.position.set(flashX, flashY, flashZ);
             phone.add(flash);
 
-            // Flash rim - Adjusted position and Z correction
-            const flashRimGeometry = new THREE.RingGeometry(flashSize, flashSize + 0.05, 32);
+            // Add inner flash detail - Make it more visible
+            const flashDetailGeometry = new THREE.CircleGeometry(flashDetailSize, 32);
+            const flashDetailMaterial = materials.cameraLens.clone(); // Use a darker lens material
+            flashDetailMaterial.color.set(0xeeeecc); // Lighter base color for detail
+            flashDetailMaterial.emissive.set(0xffffaa); // Brighter yellow emissive for detail
+            flashDetailMaterial.emissiveIntensity = 0.5; // Increased intensity
+            const flashDetail = new THREE.Mesh(flashDetailGeometry, flashDetailMaterial);
+            // Position detail slightly in front of the flash cylinder's front face
+            const flashDetailZ = flashZ - flashDepth / 2 - flashDetailOffset; 
+            flashDetail.position.set(flashX, flashY, flashDetailZ);
+            flashDetail.renderOrder = 3; // Render detail last to ensure visibility
+            phone.add(flashDetail);
+
+
+            // Flash rim - Adjusted position and Z correction for new size and detail
+            const flashRimGeometry = new THREE.RingGeometry(flashSize, flashSize + 0.035, 32); // Slightly thinner rim
             const flashRim = new THREE.Mesh(flashRimGeometry, materials.camera);
-            // Position rim slightly BEHIND flash (less negative Z)
-            flashRim.position.set(cameraClusterX + 0.8, cameraClusterY - 0.5, flashZ + 0.001);
+            flashRim.renderOrder = 2; // Render rim after flash body but before detail
+            // Position rim exactly at the flash cylinder's front face, slightly behind detail
+            const flashRimZ = flashDetailZ - 0.0005; 
+            flashRim.position.set(flashX, flashY, flashRimZ);
             phone.add(flashRim);
 
             // Add simple logo on the back
@@ -820,8 +668,8 @@ export default function SmartPhone() {
             const logoMaterial = materials.accent.clone(); // Use accent material
             logoMaterial.side = THREE.FrontSide;
             const logo = new THREE.Mesh(logoGeometry, logoMaterial);
-            // Position logo on the back, centered horizontally, below cameras
-            logo.position.set(0, -height / 4, backSurfaceZ - backElementOffset); // Position slightly OUTSIDE back surface
+            // Position logo on the back, slightly OUTSIDE back surface
+            logo.position.set(0, -height / 4, backSurfaceZ - backElementOffset - 0.001); 
             // logo.rotation.y = Math.PI; // No need to rotate PlaneGeometry if created facing +Z
             phone.add(logo);
 
@@ -843,12 +691,17 @@ export default function SmartPhone() {
             
             // --- Bottom Ports Centering Fix ---
             const addPort = (x: number, w: number) => {
-                const portDepth = 0.1; // How deep the port indentation is
-                const portGeometry = new THREE.BoxGeometry(w, 0.3, portDepth);
+                const portDepth = 0.1; // How deep the port indentation is along Z
+                const portHeight = 0.07; // Height of the port along Y
+                const portGeometry = new THREE.BoxGeometry(w, portHeight, portDepth);
                 const port = new THREE.Mesh(portGeometry, materials.port);
-                // Position center of port exactly on the bottom surface - half its depth inwards
-                port.position.set(x, -height / 2 - 0.15, -portDepth / 2); // Y adjusted slightly for visual centering, Z inwards
-                port.castShadow = true;
+                // Position:
+                // x: As provided
+                // y: Center the port height (portHeight) on the bottom edge (y = -height / 2)
+                // z: Center the port depth (portDepth) so its front face is at z=0 and it extends inwards to z = -portDepth
+                port.position.set(x, -height / 2, -portDepth / 2);
+                // Indentations don't usually cast shadows this way
+                // port.castShadow = true; 
                 phone.add(port);
             };
             
