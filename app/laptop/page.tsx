@@ -517,7 +517,6 @@ export default function Laptop() {
             }
 
             // --- Create Base Group ---
-            // ... (base group creation remains the same) ...
             const baseShape = createRoundedRectShape(baseWidth, baseDepth, cornerRadius);
             const baseExtrudeSettings = { steps: 1, depth: baseHeight, bevelEnabled: false };
             const baseGeometry = new THREE.ExtrudeGeometry(baseShape, baseExtrudeSettings);
@@ -526,66 +525,18 @@ export default function Laptop() {
             laptopBaseMat.name = 'laptop_base';
             const laptopBase = new THREE.Mesh(baseGeometry, laptopBaseMat);
             laptopBase.castShadow = true;
-            laptopBase.receiveShadow = true;
+            // Remove shadow receiving to eliminate any unwanted shadows on the base surface
+            laptopBase.receiveShadow = false;
             baseGroup.add(laptopBase); 
-            baseGroup.position.y = baseHeight / 2; 
-
-            // --- Keyboard ---
-            // ... (keyboard creation remains the same) ...
-            const keyboardGroup = new THREE.Group();
-            const keySize = 1.4;
-            const keyHeight = 0.15;
-            const keySpacing = 0.2;
-            const keyboardOffsetY = baseDepth * 0.15; 
-            const keyboardOffsetZ = baseHeight / 2 + keyHeight / 2 + 0.01; 
-
-            const keyRows = [ "qwertyuiop", "asdfghjkl", "zxcvbnm" ];
-            const rowWidths = keyRows.map(row => row.length * (keySize + keySpacing) - keySpacing);
-            const maxRowWidth = Math.max(...rowWidths);
-
-            keyRows.forEach((row, rowIndex) => {
-                const rowWidth = rowWidths[rowIndex];
-                const startX = -rowWidth / 2;
-                const yPos = baseDepth / 2 - keyboardOffsetY - rowIndex * (keySize + keySpacing) - keySize / 2; 
-
-                for (let i = 0; i < row.length; i++) {
-                    const xPos = startX + i * (keySize + keySpacing) + keySize / 2;
-                    const keyGeometry = new THREE.BoxGeometry(keySize, keySize, keyHeight);
-                    const key = new THREE.Mesh(keyGeometry, materials.keyCap);
-                    key.position.set(xPos, yPos, keyboardOffsetZ); 
-                    key.castShadow = true;
-                    keyboardGroup.add(key);
-                }
-            });
-            const spacebarWidth = keySize * 5 + keySpacing * 4;
-            const spacebarY = baseDepth / 2 - keyboardOffsetY - keyRows.length * (keySize + keySpacing) - keySize / 2;
-            const spacebarGeometry = new THREE.BoxGeometry(spacebarWidth, keySize, keyHeight);
-            const spacebar = new THREE.Mesh(spacebarGeometry, materials.keyCap);
-            spacebar.position.set(0, spacebarY, keyboardOffsetZ); 
-            spacebar.castShadow = true;
-            keyboardGroup.add(spacebar);
-            baseGroup.add(keyboardGroup);
-
-            // --- Touchpad ---
-            // ... (touchpad creation remains the same) ...
-            const touchpadWidth = baseWidth * 0.35;
-            const touchpadHeight = baseDepth * 0.25;
-            const touchpadOffsetY = baseDepth * 0.05; 
-            const touchpadPosZ = baseHeight / 2 + 0.01; 
-            const touchpadGeometry = new THREE.BoxGeometry(touchpadWidth, touchpadHeight, 0.05); 
-            const touchpad = new THREE.Mesh(touchpadGeometry, materials.touchpad);
-            touchpad.position.set(0, -baseDepth / 2 + touchpadOffsetY + touchpadHeight / 2, touchpadPosZ); 
-            touchpad.receiveShadow = true; 
-            baseGroup.add(touchpad);
+            baseGroup.position.y = baseHeight / 2;
+            
+            // Removed keyboard group completely
+            // Removed touchpad completely
 
             // --- Hinge --- (Visual Only)
             // Define the pivot point coordinates relative to baseGroup origin
-            // User's previous values:
             const pivotY = baseHeight * 6.7; 
             const pivotZ = baseDepth / 22; 
-            // To align perfectly with the top-back edge, use:
-            // const pivotY = baseHeight / 2; 
-            // const pivotZ = -baseDepth / 2; 
 
             // Add visual hinges
             const hingeRadius = 0.4;
@@ -606,29 +557,15 @@ export default function Laptop() {
             baseGroup.add(hingeR);
 
             // --- Assemble Laptop ---
-            laptop.add(baseGroup); // Add base group (which includes keyboard, touchpad, hinges)
+            laptop.add(baseGroup); // Add base group (which includes hinges)
 
             // Position and rotate display group relative to the base group's pivot point
-            displayGroup.position.set(0, pivotY, pivotZ); // Set pivot point using user's values
-            // User's previous value:
+            displayGroup.position.set(0, pivotY, pivotZ); 
             displayGroup.rotation.x = Math.PI / 2.5 ; 
-            // To open upwards/backwards, use a negative value:
-            // displayGroup.rotation.x = -Math.PI / 2.5 ; 
 
             // Add display group as a child of the base group
             baseGroup.add(displayGroup); 
             displayGroupRef.current = displayGroup; 
-
-            // Add Ports/Buttons to Base 
-            // ... (power button code remains the same) ...
-            const powerButtonSize = 0.8;
-            const powerButtonHeight = 0.1;
-            const powerButtonGeometry = new THREE.BoxGeometry(powerButtonSize, powerButtonHeight, powerButtonSize); // W, H, D
-            powerButtonGeometry.rotateX(Math.PI / 2); // Rotate like keys
-            const powerButton = new THREE.Mesh(powerButtonGeometry, materials.buttons);
-            const powerButtonOffsetY = baseHeight / 2 + powerButtonHeight / 2 + 0.01;
-            powerButton.position.set(baseWidth/2 - 2, powerButtonOffsetY, baseDepth/2 - 2); 
-            baseGroup.add(powerButton);
 
             return laptop; // Return the main laptop group
         };
