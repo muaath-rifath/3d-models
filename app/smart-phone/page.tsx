@@ -28,9 +28,9 @@ export default function SmartPhone() {
 
                 // Identify parts by their name and update accordingly
                 if (material.name === 'phone_body') {
-                    material.color.set(isDark ? 0x1a2e20 : 0xd0e8ff);
-                    material.emissive.set(isDark ? 0x0a1a10 : 0x000000);
-                    material.emissiveIntensity = isDark ? 0.2 : 0;
+                    material.color.set(isDark ? 0x4a5e50 : 0xd0e8ff); // Brighter dark color again
+                    material.emissive.set(isDark ? 0x203025 : 0x000000); // Brighter emissive again
+                    material.emissiveIntensity = isDark ? 0.35 : 0; // Increased intensity again
                 }
                 else if (material.name === 'screen') {
                     material.color.set(isDark ? 0x00ffaa : 0x00aa88);
@@ -61,9 +61,9 @@ export default function SmartPhone() {
                     material.color.set(isDark ? 0x333333 : 0x777777);
                 }
                 else if (material.name === 'buttons') {
-                    material.color.set(isDark ? 0x1a2e20 : 0xd0e8ff);
-                    material.emissive.set(isDark ? 0x0a1a10 : 0x000000);
-                    material.emissiveIntensity = isDark ? 0.15 : 0.0;
+                    material.color.set(isDark ? 0x4a5e50 : 0xd0e8ff); // Match phone body dark color
+                    material.emissive.set(isDark ? 0x203025 : 0x000000); // Match phone body emissive
+                    material.emissiveIntensity = isDark ? 0.3 : 0.0; // Increased intensity again
                 }
                 else if (material.name === 'notch') {
                     material.color.set(isDark ? 0x112211 : 0x333333);
@@ -181,11 +181,11 @@ export default function SmartPhone() {
             return {
                 phoneBody: new THREE.MeshStandardMaterial({
                     name: 'phone_body',
-                    color: isDark ? 0x1a2e20 : 0xd0e8ff,
+                    color: isDark ? 0x4a5e50 : 0xd0e8ff, // Brighter dark color again
                     metalness: 0.8,
                     roughness: 0.2,
-                    emissive: isDark ? 0x0a1a10 : 0x000000,
-                    emissiveIntensity: isDark ? 0.2 : 0,
+                    emissive: isDark ? 0x203025 : 0x000000, // Brighter emissive again
+                    emissiveIntensity: isDark ? 0.35 : 0, // Increased intensity again
                     side: THREE.DoubleSide // Ensure visibility even if normals are flipped
                 }),
                 
@@ -244,11 +244,11 @@ export default function SmartPhone() {
                 
                 buttons: new THREE.MeshStandardMaterial({
                     name: 'buttons',
-                    color: isDark ? 0x1a2e20 : 0xd0e8ff,
+                    color: isDark ? 0x4a5e50 : 0xd0e8ff, // Match phone body dark color
                     metalness: 0.9,
                     roughness: 0.3,
-                    emissive: isDark ? 0x0a1a10 : 0x000000,
-                    emissiveIntensity: isDark ? 0.15 : 0.0
+                    emissive: isDark ? 0x203025 : 0x000000, // Match phone body emissive
+                    emissiveIntensity: isDark ? 0.3 : 0.0 // Increased intensity again
                 }),
                 
                 // New materials for enhanced display and cameras
@@ -439,11 +439,11 @@ export default function SmartPhone() {
             phone.add(selfieCamera);
 
             // Create Widget function
-            const createWidget = (x: number, y: number, w: number, h: number, title: string) => {
+            const createWidget = (x: number, y: number, w: number, h: number, index: number) => {
                 const widgetGroup = new THREE.Group();
                 widgetGroup.position.set(x, y, widgetZ); // Set base position for the group
 
-                // Widget Background
+                // Widget Background (same as before)
                 const widgetShape = createRoundedRectShape(w, h, widgetCornerRadius);
                 const widgetGeometry = new THREE.ShapeGeometry(widgetShape);
                 const widgetMaterial = new THREE.MeshStandardMaterial({
@@ -461,48 +461,178 @@ export default function SmartPhone() {
                 widgetBg.receiveShadow = true;
                 widgetGroup.add(widgetBg); // Add to group
 
-                // Widget Title (Simulated with a plane - keep simple)
-                const titleHeight = 0.25; // Slightly smaller
+                // Widget Title (Vary based on index)
+                const titles = ["Temperature", "Humidity", "Light Level", "Energy Usage", "Device Status", "Network Traffic"];
+                const titleText = titles[index % titles.length] || `Sensor ${index + 1}`; // Use index for title
+                const titleHeight = 0.25;
                 const titleWidth = w * 0.7;
                 const titleGeometry = new THREE.PlaneGeometry(titleWidth, titleHeight);
                 const titleMaterial = materials.textElement.clone();
-                titleMaterial.color.set(isDarkMode ? 0xccffdd : 0x333333); // Adjust text color
+                titleMaterial.color.set(isDarkMode ? 0xccffdd : 0x333333);
                 titleMaterial.emissive.set(isDarkMode ? 0x88ccaa : 0x000000);
                 titleMaterial.emissiveIntensity = isDarkMode ? 0.3 : 0;
                 titleMaterial.side = THREE.FrontSide;
                 const titleMesh = new THREE.Mesh(titleGeometry, titleMaterial);
-                titleMesh.position.set(0, h / 2 - titleHeight / 2 - 0.15, widgetContentZ - widgetZ); // Adjusted Y
+                titleMesh.position.set(0, h / 2 - titleHeight / 2 - 0.15, widgetContentZ - widgetZ);
                 widgetGroup.add(titleMesh);
 
-                // Widget Data Area (Simulated Bar Chart)
-                const chartAreaHeight = h * 0.4;
-                const chartAreaWidth = w * 0.7;
-                const barCount = 5;
-                const barWidth = chartAreaWidth / (barCount * 1.5); // Bars with spacing
-                const barSpacing = barWidth * 0.5;
-                const maxBarHeight = chartAreaHeight * 0.8;
+                // --- Widget Data Area - Generate different content based on index ---
+                const dataAreaX = 0; // Center of the widget horizontally
+                const dataAreaY = -0.1; // Position below the title
+                const dataAreaWidth = w * 0.8;
+                const dataAreaHeight = h * 0.45; // Available height for data vis
+                const contentZ = widgetContentZ - widgetZ + 0.001; // Z offset for content
 
-                for (let i = 0; i < barCount; i++) {
-                    const barHeight = Math.random() * maxBarHeight; // Random height for demo
-                    const barGeometry = new THREE.BoxGeometry(barWidth, barHeight, 0.01); // Very thin box
-                    // Alternate materials for bars
-                    const barMaterial = (i % 2 === 0) ? materials.graphElement.clone() : materials.chartElement.clone();
-                    barMaterial.side = THREE.FrontSide;
-                    const barMesh = new THREE.Mesh(barGeometry, barMaterial);
-                    // Position bars within the data area
-                    const barX = -chartAreaWidth / 2 + barWidth / 2 + i * (barWidth + barSpacing);
-                    const barY = -chartAreaHeight / 2 + barHeight / 2; // Align bottom of bar
-                    barMesh.position.set(barX, barY, widgetContentZ - widgetZ + 0.001); // Slightly above title plane Z
-                    widgetGroup.add(barMesh);
+                // Seed random generator based on index for variety but consistency per widget
+                const randomSeed = (index + 1) * 1234;
+                const seededRandom = (offset = 0) => {
+                    let x = Math.sin(randomSeed + offset) * 10000;
+                    return x - Math.floor(x);
+                };
+
+                const widgetType = index % titles.length; // Determine type based on index
+
+                switch (widgetType) {
+                    case 0: // Temperature - Line Graph Simulation
+                        const points = [];
+                        const segments = 10;
+                        for (let i = 0; i <= segments; i++) {
+                            const px = -dataAreaWidth / 2 + (i / segments) * dataAreaWidth;
+                            const py = (seededRandom(i) - 0.5) * dataAreaHeight * 0.8; // Random Y variation
+                            points.push(new THREE.Vector3(px, py, 0));
+                        }
+                        const lineGeometry = new THREE.BufferGeometry().setFromPoints(points);
+                        const lineMaterial = new THREE.LineBasicMaterial({ color: isDarkMode ? 0xff8888 : 0xcc0000, linewidth: 2 });
+                        const line = new THREE.Line(lineGeometry, lineMaterial);
+                        line.position.set(dataAreaX, dataAreaY, contentZ);
+                        widgetGroup.add(line);
+                        break;
+
+                    case 1: // Humidity - Gauge Simulation (Arc)
+                        const gaugeRadius = dataAreaHeight * 0.6;
+                        const arcPercentage = seededRandom();
+                        const arcGeometry = new THREE.RingGeometry(gaugeRadius * 0.8, gaugeRadius, 32, 1, 0, Math.PI * arcPercentage);
+                        const arcMaterial = materials.chartElement.clone();
+                        arcMaterial.side = THREE.DoubleSide;
+                        const arcMesh = new THREE.Mesh(arcGeometry, arcMaterial);
+                        arcMesh.position.set(dataAreaX, dataAreaY - gaugeRadius * 0.2, contentZ); // Adjust position
+                        arcMesh.rotation.z = -Math.PI / 2; // Start arc from the bottom
+                        widgetGroup.add(arcMesh);
+                        // Add background arc
+                        const bgArcGeometry = new THREE.RingGeometry(gaugeRadius * 0.8, gaugeRadius, 32, 1, 0, Math.PI);
+                        const bgArcMaterial = new THREE.MeshStandardMaterial({ color: isDarkMode ? 0x224455 : 0xcccccc, side: THREE.DoubleSide, opacity: 0.3, transparent: true });
+                        const bgArcMesh = new THREE.Mesh(bgArcGeometry, bgArcMaterial);
+                        bgArcMesh.position.copy(arcMesh.position);
+                        bgArcMesh.rotation.copy(arcMesh.rotation);
+                        widgetGroup.add(bgArcMesh);
+                        break;
+
+                    case 2: // Light Level - Radial Indicator
+                        const indicatorRadius = dataAreaHeight * 0.5;
+                        const lightLevel = seededRandom();
+                        const indicatorGeometry = new THREE.CircleGeometry(indicatorRadius * lightLevel, 32); // Radius based on random value
+                        const indicatorMaterial = new THREE.MeshBasicMaterial({ color: isDarkMode ? 0xffffaa : 0xffcc00 });
+                        const indicatorMesh = new THREE.Mesh(indicatorGeometry, indicatorMaterial);
+                        indicatorMesh.position.set(dataAreaX, dataAreaY, contentZ);
+                        widgetGroup.add(indicatorMesh);
+                        // Add outer ring
+                        const ringGeometry = new THREE.RingGeometry(indicatorRadius * 0.95, indicatorRadius, 32);
+                        const ringMaterial = new THREE.MeshBasicMaterial({ color: isDarkMode ? 0xaaaa88 : 0x888888, side: THREE.DoubleSide });
+                        const ringMesh = new THREE.Mesh(ringGeometry, ringMaterial);
+                        ringMesh.position.copy(indicatorMesh.position);
+                        widgetGroup.add(ringMesh);
+                        break;
+
+                    case 3: // Energy Usage - Stacked Bars Simulation
+                        const barCountEnergy = 3;
+                        const barWidthEnergy = dataAreaWidth / (barCountEnergy * 1.8);
+                        const barSpacingEnergy = barWidthEnergy * 0.8;
+                        const maxTotalHeight = dataAreaHeight * 0.9;
+                        for (let i = 0; i < barCountEnergy; i++) {
+                            const height1 = seededRandom(i) * maxTotalHeight * 0.6;
+                            const height2 = seededRandom(i + 10) * maxTotalHeight * 0.4;
+                            const geom1 = new THREE.BoxGeometry(barWidthEnergy, height1, 0.01);
+                            const mat1 = materials.graphElement.clone();
+                            const mesh1 = new THREE.Mesh(geom1, mat1);
+                            const barX = -dataAreaWidth / 2 + barWidthEnergy / 2 + i * (barWidthEnergy + barSpacingEnergy);
+                            mesh1.position.set(barX, dataAreaY - dataAreaHeight / 2 + height1 / 2, contentZ);
+                            widgetGroup.add(mesh1);
+
+                            const geom2 = new THREE.BoxGeometry(barWidthEnergy, height2, 0.01);
+                            const mat2 = materials.chartElement.clone();
+                            const mesh2 = new THREE.Mesh(geom2, mat2);
+                            mesh2.position.set(barX, mesh1.position.y + height1 / 2 + height2 / 2, contentZ); // Stack on top
+                            widgetGroup.add(mesh2);
+                        }
+                        break;
+
+                    case 4: // Device Status - Text/Indicator Simulation
+                        const statusCount = 3;
+                        const statusHeight = dataAreaHeight / statusCount * 0.6;
+                        const statusWidth = dataAreaWidth * 0.8;
+                        const statusSpacing = (dataAreaHeight - (statusHeight * statusCount)) / (statusCount + 1);
+                        const statuses = ["Online", "Scanning", "Idle"];
+                        const statusColors = [0x66ff66, 0xffff66, 0x8888ff];
+
+                        for (let i = 0; i < statusCount; i++) {
+                            const planeGeom = new THREE.PlaneGeometry(statusWidth, statusHeight);
+                            const planeMat = materials.textElement.clone();
+                            planeMat.color.set(isDarkMode ? 0xaaaaaa : 0x555555); // Simulate text background
+                            const planeMesh = new THREE.Mesh(planeGeom, planeMat);
+                            const planeY = dataAreaY + dataAreaHeight / 2 - statusSpacing * (i + 1) - statusHeight * (i + 0.5);
+                            planeMesh.position.set(dataAreaX, planeY, contentZ);
+                            widgetGroup.add(planeMesh);
+
+                            // Add status indicator circle
+                            const indicatorGeom = new THREE.CircleGeometry(statusHeight * 0.4, 16);
+                            const indicatorMat = new THREE.MeshBasicMaterial({ color: statusColors[i % statusColors.length] });
+                            const indicatorMesh = new THREE.Mesh(indicatorGeom, indicatorMat);
+                            indicatorMesh.position.set(dataAreaX - statusWidth / 2 + statusHeight * 0.5, planeY, contentZ + 0.001);
+                            widgetGroup.add(indicatorMesh);
+                        }
+                        break;
+
+                    case 5: // Network Traffic - Dual Line Graph Simulation
+                        const pointsUp: THREE.Vector3[] = [];
+                        const pointsDown: THREE.Vector3[] = [];
+                        const segmentsNet = 10;
+                        for (let i = 0; i <= segmentsNet; i++) {
+                            const px = -dataAreaWidth / 2 + (i / segmentsNet) * dataAreaWidth;
+                            const pyUp = (seededRandom(i) - 0.5) * dataAreaHeight * 0.4 + dataAreaHeight * 0.25; // Upper half
+                            const pyDown = (seededRandom(i + 50) - 0.5) * dataAreaHeight * 0.4 - dataAreaHeight * 0.25; // Lower half
+                            pointsUp.push(new THREE.Vector3(px, pyUp, 0));
+                            pointsDown.push(new THREE.Vector3(px, pyDown, 0));
+                        }
+                        const lineGeomUp = new THREE.BufferGeometry().setFromPoints(pointsUp);
+                        const lineMatUp = new THREE.LineBasicMaterial({ color: isDarkMode ? 0x66ff66 : 0x00aa00, linewidth: 2 });
+                        const lineUp = new THREE.Line(lineGeomUp, lineMatUp);
+                        lineUp.position.set(dataAreaX, dataAreaY, contentZ);
+                        widgetGroup.add(lineUp);
+
+                        const lineGeomDown = new THREE.BufferGeometry().setFromPoints(pointsDown);
+                        const lineMatDown = new THREE.LineBasicMaterial({ color: isDarkMode ? 0x66aaff : 0x0066cc, linewidth: 2 });
+                        const lineDown = new THREE.Line(lineGeomDown, lineMatDown);
+                        lineDown.position.set(dataAreaX, dataAreaY, contentZ);
+                        widgetGroup.add(lineDown);
+                        break;
+
+                    default: // Fallback or other widget types
+                        // Could add more types or a default placeholder
+                        break;
                 }
 
-                // Widget Status/Icon Area (Small Circle)
+
+                // Widget Status/Icon Area (Vary color based on index - kept from previous step)
                 const statusRadius = 0.15;
                 const statusGeometry = new THREE.CircleGeometry(statusRadius, 16);
-                const statusMaterial = materials.accent.clone(); // Reuse accent material
+                const statusMaterial = materials.accent.clone(); // Start with accent
+                // Change color based on index
+                const statusColorsCycle = [0xff6666, 0x66ff66, 0x6666ff, 0xffff66, 0xff66ff, 0x66ffff];
+                statusMaterial.color.set(statusColorsCycle[index % statusColorsCycle.length]);
+                statusMaterial.emissive.set(statusColorsCycle[index % statusColorsCycle.length]); // Make it glow slightly
+                statusMaterial.emissiveIntensity = isDarkMode ? 0.4 : 0.1;
                 statusMaterial.side = THREE.FrontSide;
                 const statusMesh = new THREE.Mesh(statusGeometry, statusMaterial);
-                // Position status at the bottom-left, slightly forward
                 statusMesh.position.set(-w / 2 + statusRadius + 0.1, -h / 2 + statusRadius + 0.1, widgetContentZ - widgetZ);
                 widgetGroup.add(statusMesh);
 
@@ -513,29 +643,34 @@ export default function SmartPhone() {
             const padding = 0.2; // Padding around dashboard edges and between widgets
             const usableWidth = dashboardWidth - padding * 2;
             const usableHeight = dashboardHeight - padding * 2;
+            // Adjust rows/cols if needed, e.g., 2 rows, 3 cols
             const widgetCols = 2;
             const widgetRows = 3;
             const widgetWidth = (usableWidth - padding * (widgetCols - 1)) / widgetCols;
             const widgetHeight = (usableHeight - padding * (widgetRows - 1)) / widgetRows;
 
             const startX = -usableWidth / 2 + widgetWidth / 2;
-            const startY = usableHeight / 2 - widgetHeight / 2;
+            // Adjust startY if punch hole is at the top
+            const topOffsetForCamera = punchHoleRadius * 2 + 0.2; // Space below camera
+            const adjustedUsableHeight = usableHeight - topOffsetForCamera;
+            const adjustedWidgetHeight = (adjustedUsableHeight - padding * (widgetRows - 1)) / widgetRows;
+            const startY = usableHeight / 2 - topOffsetForCamera - adjustedWidgetHeight / 2; // Start below camera
 
-            let widgetCount = 0;
+
+            let widgetIndex = 0; // Use a separate index counter
             for (let r = 0; r < widgetRows; r++) {
                 for (let c = 0; c < widgetCols; c++) {
-                    widgetCount++;
                     const x = startX + c * (widgetWidth + padding);
-                    const y = startY - r * (widgetHeight + padding);
-                    const widget = createWidget(x, y, widgetWidth, widgetHeight, `Widget ${widgetCount}`);
+                    // Use adjusted height and startY for positioning
+                    const y = startY - r * (adjustedWidgetHeight + padding);
+                    // Pass the widgetIndex to createWidget
+                    const widget = createWidget(x, y, widgetWidth, adjustedWidgetHeight, widgetIndex);
                     phone.add(widget); // Add widget group directly to the phone
+                    widgetIndex++; // Increment the index
                 }
             }
 
             // --- Remove Old UI Elements ---
-            // The code for statusBar, dashboard, tempGraph, deviceStatus, textSection, navBar, etc.
-            // has been effectively replaced by the new dashboard and widget creation logic above.
-            // No need to explicitly remove them if they are not created.
 
             // --- Back Camera, Buttons, Ports (Keep Existing) ---
             const backSurfaceZ = -thickness / 2; // Define back surface Z
