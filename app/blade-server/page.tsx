@@ -6,8 +6,6 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 export default function BladeServer() {
     const mountRef = useRef<HTMLDivElement>(null);
     const [darkMode, setDarkMode] = useState(true);
-    const [interactionPoint, setInteractionPoint] = useState({ x: 0, y: 0 });
-    const [isDragging, setIsDragging] = useState(false);
     
     useEffect(() => {
         if (!mountRef.current) return;
@@ -53,19 +51,9 @@ export default function BladeServer() {
         
         currentMount.appendChild(renderer.domElement);
         
-        // Add preventDefault to stop page refresh - update to use capture
-        const preventDefaultBehavior = (event: Event) => {
-            event.preventDefault();
-            event.stopPropagation(); // Added to stop propagation
-        };
+        // IMPORTANT: Remove all document-level event listeners that were preventing interactions
         
-        // Apply the event listeners with capture=true for earlier handling
-        document.addEventListener('pointerdown', preventDefaultBehavior, { capture: true });
-        document.addEventListener('mousedown', preventDefaultBehavior, { capture: true });
-        document.addEventListener('touchstart', preventDefaultBehavior, { capture: true, passive: false });
-        document.addEventListener('dragstart', preventDefaultBehavior, { capture: true });
-        
-        // Improve orbit controls with better touch and mouse support
+        // Set up orbit controls - simplified configuration
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
@@ -73,45 +61,10 @@ export default function BladeServer() {
         controls.maxDistance = 100;
         controls.enableZoom = true;
         controls.zoomSpeed = 1.2;
-        
-        // Set rotation speeds
-        controls.rotateSpeed = 1.0;
-        
-        // Enable/disable specific controls
+        controls.rotateSpeed = 1.5; // Increased for better responsiveness
         controls.enablePan = true;
         controls.enableRotate = true;
-        
-        // Disable auto-rotation - only rotate when dragging
         controls.autoRotate = false;
-        
-        // Add event listeners to monitor dragging state - with explicit passive false
-        const handleMouseDown = (event: MouseEvent) => {
-            event.preventDefault();
-            event.stopPropagation();
-            setIsDragging(true);
-        };
-        
-        const handleMouseUp = (event: MouseEvent) => {
-            event.preventDefault();
-            setIsDragging(false);
-        };
-        
-        const handleTouchStart = (event: TouchEvent) => {
-            event.preventDefault();
-            setIsDragging(true);
-        };
-        
-        const handleTouchEnd = (event: TouchEvent) => {
-            event.preventDefault();
-            setIsDragging(false);
-        };
-        
-        // Use addEventListener with explicit options
-        renderer.domElement.addEventListener('mousedown', handleMouseDown, { passive: false });
-        renderer.domElement.addEventListener('mouseup', handleMouseUp, { passive: false });
-        renderer.domElement.addEventListener('mouseleave', handleMouseUp, { passive: false });
-        renderer.domElement.addEventListener('touchstart', handleTouchStart, { passive: false });
-        renderer.domElement.addEventListener('touchend', handleTouchEnd, { passive: false });
         
         // Main group for all visuals
         const mainGroup = new THREE.Group();
@@ -480,35 +433,7 @@ export default function BladeServer() {
         const serverChassis = createServerChassis();
         serverGroup.add(serverChassis);
         
-        // Add subtle futuristic elements that don't make it too artificial
-        
-        // Floating particle effect around the server (subtle)
-        const particlesCount = 300; // Reduced count
-        const particlesGeometry = new THREE.BufferGeometry();
-        const particlesMaterial = new THREE.PointsMaterial({
-            size: 0.1, // Smaller particles
-            color: glowColor,
-            transparent: true,
-            opacity: 0.4, // More subtle
-            blending: THREE.AdditiveBlending,
-            sizeAttenuation: true
-        });
-        
-        const particlesPositions = new Float32Array(particlesCount * 3);
-        for (let i = 0; i < particlesCount; i++) {
-            const i3 = i * 3;
-            // Keep particles closer to the server
-            const distance = 10 + Math.random() * 15;
-            const theta = Math.random() * Math.PI * 2;
-            const phi = Math.random() * Math.PI * 2;
-            
-            particlesPositions[i3] = distance * Math.sin(theta) * Math.cos(phi);
-            particlesPositions[i3 + 1] = distance * Math.sin(theta) * Math.sin(phi);
-            particlesPositions[i3 + 2] = distance * Math.cos(theta);
-        }
-        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(particlesPositions, 3));
-        const particles = new THREE.Points(particlesGeometry, particlesMaterial);
-        serverGroup.add(particles);
+        // REMOVED: Particle system (snow effect) as requested by user
         
         // Create data visualization hologram above the server
         const createDataHologram = () => {
@@ -717,88 +642,33 @@ export default function BladeServer() {
         scene.add(createAccentLight(primaryColor, new THREE.Vector3(15, 5, 15), 1));
         scene.add(createAccentLight(accentColor, new THREE.Vector3(-15, 8, -15), 1));
         
-        // Animate particles - more subtle movement
-        const animateParticles = (particles: THREE.Points, time: number) => {
-            const positions = particles.geometry.attributes.position.array as Float32Array;
-            
-            for (let i = 0; i < particlesCount; i++) {
-                const i3 = i * 3;
-                const x = positions[i3];
-                const y = positions[i3 + 1];
-                const z = positions[i3 + 2];
-                
-                // Calculate distance from center
-                const distance = Math.sqrt(x*x + y*y + z*z);
-                
-                // Only move particles within certain range
-                if (distance > 10 && distance < 30) {
-                    // Create a wave-like motion - more subtle
-                    positions[i3 + 1] += Math.sin(time * 0.3 + distance) * 0.01;
-                    
-                    // Slowly rotate particles
-                    const angle = 0.001; // Slower rotation
-                    const newX = x * Math.cos(angle) - z * Math.sin(angle);
-                    const newZ = x * Math.sin(angle) + z * Math.cos(angle);
-                    positions[i3] = newX;
-                    positions[i3 + 2] = newZ;
-                }
-                
-                // Reset particles that drift too far
-                if (distance > 35) {
-                    positions[i3] *= 0.95;
-                    positions[i3 + 1] *= 0.95;
-                    positions[i3 + 2] *= 0.95;
-                }
-            }
-            
-            particles.geometry.attributes.position.needsUpdate = true;
-        };
-        
-        // Animate the data visualization hologram
+        // Animation loop
+        let time = 0;
+
+        // Define the animateHologram function
         const animateHologram = (hologram: THREE.Group, time: number) => {
-            // Find and animate the data bars
             hologram.children.forEach(child => {
-                if (child instanceof THREE.Mesh && child.userData && child.userData.originalHeight !== undefined) {
-                    const index = child.userData.index;
-                    const originalHeight = child.userData.originalHeight;
-                    const newHeight = originalHeight + Math.sin(time * 0.5 + index) * 0.5;
+                if (child instanceof THREE.Mesh && child.userData && child.userData.originalHeight) {
+                    // Animate the height of data bars
+                    const newHeight = child.userData.originalHeight + Math.sin(time * 2 + child.userData.index) * 0.5;
+                    child.scale.y = newHeight / child.userData.originalHeight;
                     
-                    // Update scale and position to animate the bar height
-                    child.scale.y = newHeight / originalHeight;
-                    child.position.y = 8 + newHeight/2;
+                    // Adjust position since scaling occurs from center
+                    const heightDiff = (newHeight - child.userData.originalHeight) / 2;
+                    child.position.y = 8 + child.userData.originalHeight/2 + heightDiff;
+                }
+                
+                // Add subtle rotation to the entire hologram
+                if (child instanceof THREE.Mesh && child.geometry instanceof THREE.PlaneGeometry) {
+                    child.rotation.z = Math.sin(time * 0.5) * 0.05;
                 }
             });
         };
         
-        // Track mouse position for subtle interactive effects
-        const updateMousePosition = (event: MouseEvent) => {
-            if (!isDragging) {
-                setInteractionPoint({
-                    x: (event.clientX / window.innerWidth) * 2 - 1,
-                    y: -(event.clientY / window.innerHeight) * 2 + 1
-                });
-            }
-        };
-        
-        const updateTouchPosition = (event: TouchEvent) => {
-            if (!isDragging && event.touches.length > 0) {
-                setInteractionPoint({
-                    x: (event.touches[0].clientX / window.innerWidth) * 2 - 1,
-                    y: -(event.touches[0].clientY / window.innerHeight) * 2 + 1
-                });
-            }
-        };
-        
-        window.addEventListener('mousemove', updateMousePosition);
-        window.addEventListener('touchmove', updateTouchPosition);
-        
-        // Animation loop
-        let time = 0;
         const animate = () => {
             time += 0.01;
             
-            // Animate particles
-            animateParticles(particles, time);
+            // REMOVED: Particle animation
             
             // Animate hologram
             animateHologram(dataHologram, time);
@@ -806,11 +676,7 @@ export default function BladeServer() {
             // Subtle pulsing effect on the platform ring
             ringMaterial.opacity = 0.6 + Math.sin(time) * 0.1;
             
-            // Only update mainGroup rotation based on mouse if not dragging
-            if (!isDragging) {
-                mainGroup.rotation.x = interactionPoint.y * 0.03; // Very subtle effect
-                mainGroup.rotation.y = interactionPoint.x * 0.03; // Very subtle effect
-            }
+            // REMOVED: Mouse-based rotation to prevent conflicts with OrbitControls
             
             // Animate status LEDs on the front panel
             const frontPanel = serverChassis.children.find(child => child.position.z === 15);
@@ -858,25 +724,13 @@ export default function BladeServer() {
         // Cleanup
         return () => {
             window.removeEventListener('resize', handleResize);
-            window.removeEventListener('mousemove', updateMousePosition);
-            window.removeEventListener('touchmove', updateTouchPosition);
             cancelAnimationFrame(animationFrameId);
             
             if (currentMount && currentMount.contains(renderer.domElement)) {
                 currentMount.removeChild(renderer.domElement);
             }
             
-            // Clean up all event listeners - including document level ones
-            document.removeEventListener('pointerdown', preventDefaultBehavior, { capture: true });
-            document.removeEventListener('mousedown', preventDefaultBehavior, { capture: true });
-            document.removeEventListener('touchstart', preventDefaultBehavior, { capture: true });
-            document.removeEventListener('dragstart', preventDefaultBehavior, { capture: true });
-            
-            renderer.domElement.removeEventListener('mousedown', handleMouseDown);
-            renderer.domElement.removeEventListener('mouseup', handleMouseUp);
-            renderer.domElement.removeEventListener('mouseleave', handleMouseUp);
-            renderer.domElement.removeEventListener('touchstart', handleTouchStart);
-            renderer.domElement.removeEventListener('touchend', handleTouchEnd);
+            // REMOVED: Document-level event listener cleanup that was causing issues
             
             scene.traverse((object) => {
                 if (object instanceof THREE.Mesh) {
@@ -890,23 +744,12 @@ export default function BladeServer() {
                 }
             });
         };
-    }, [darkMode, interactionPoint, isDragging]);
+    }, [darkMode]); // Removed unnecessary dependencies
 
     return (
-        <div 
-            className="relative w-full h-screen" 
-            onContextMenu={(e) => e.preventDefault()}
-            onClick={(e) => e.stopPropagation()}
-            onMouseDown={(e) => e.stopPropagation()}
-            onTouchStart={(e) => e.stopPropagation()}
-        >
-            <div 
-                ref={mountRef} 
-                className="w-full h-full"
-                onDragStart={(e) => e.preventDefault()}
-                onMouseDown={(e) => e.stopPropagation()}
-                onClick={(e) => e.stopPropagation()}
-            ></div>
+        <div className="relative w-full h-screen">
+            {/* Simplified container div without event handling interference */}
+            <div ref={mountRef} className="w-full h-full"></div>
             
             <div className="absolute bottom-8 left-1/2 transform -translate-x-1/2 text-center text-white dark:text-white text-opacity-80 text-lg font-light">
                 <p className="text-sm mb-1 tracking-wider">ENTERPRISE BLADE SERVER</p>
@@ -914,7 +757,10 @@ export default function BladeServer() {
             </div>
             
             <button 
-                onClick={() => setDarkMode(!darkMode)}
+                onClick={(e) => {
+                    e.stopPropagation(); // Prevent this from affecting the 3D context
+                    setDarkMode(!darkMode);
+                }}
                 className="absolute top-4 right-4 bg-gray-800 text-white dark:bg-gray-200 dark:text-black px-4 py-2 rounded-md 
                           transition-all hover:bg-gray-700 dark:hover:bg-gray-300 shadow-lg"
             >
