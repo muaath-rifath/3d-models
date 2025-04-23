@@ -567,6 +567,179 @@ export default function Laptop() {
             baseGroup.add(displayGroup); 
             displayGroupRef.current = displayGroup; 
 
+            // --- Add Keyboard ---
+            const keyboardGroup = new THREE.Group();
+            
+            // Define consistent gap sizes for all sides
+            const sideGap = 0.8; // Gap for left and right edges
+            // Adjust gaps to move keyboard higher
+            const topGap = 0.5;  // Smaller gap at the top/back edge
+            const bottomGap = 1.2; // Larger gap at the bottom/front edge (increased by the amount topGap decreased)
+            
+            // Calculate available keyboard area dimensions based on gaps
+            const keyboardWidth = baseWidth - sideGap * 2; // Width available for keyboard background and keys
+            const keyboardDepth = baseDepth - topGap - bottomGap - 7; // Depth available for keyboard background and keys
+            
+            // Define keyboard base thickness (visual recess)
+            const keyboardBaseThickness = 0.5;
+            
+            // Create keyboard background geometry using calculated dimensions
+            const keyboardBaseGeometry = new THREE.BoxGeometry(keyboardWidth, keyboardBaseThickness, keyboardDepth);
+            const keyboardBaseMaterial = new THREE.MeshStandardMaterial({
+                color: isDarkMode ? 0x252e25 : 0xc8d8c8,
+                roughness: 0.8,
+                metalness: 0.2,
+                transparent: true,
+                opacity: 0.4
+            });
+            const keyboardBase = new THREE.Mesh(keyboardBaseGeometry, keyboardBaseMaterial);
+            
+            // Position keyboard base centered within the base, respecting the adjusted gaps
+            const baseSurfaceY = baseHeight / 2; // Top surface Y of the main base in local space
+            keyboardBase.position.set(
+                0, 
+                baseSurfaceY + keyboardBaseThickness/2, 
+                -baseDepth/2 + topGap + keyboardDepth/2 // Position based on *new* topGap and calculated depth
+            );
+            keyboardGroup.add(keyboardBase);
+            
+            // Define key grid layout parameters
+            const rows = 6;
+            const cols = 15;
+            const keyGap = 0.075; // Keep gap relatively small
+            const keyHeight = 0.12; 
+
+            // Calculate maximum key size to fill the available keyboard area (keyboardWidth x keyboardDepth) exactly
+            const maxKeyWidth = (keyboardWidth - (cols - 1) * keyGap) / cols;
+            const maxKeyDepth = (keyboardDepth - (rows - 1) * keyGap) / rows;
+            // Use the smaller dimension to maintain square-like keys
+            const keySize = Math.min(maxKeyWidth, maxKeyDepth); 
+
+            // Calculate actual dimensions of the key grid based on the calculated keySize
+            // This grid should now perfectly fit within keyboardWidth x keyboardDepth
+            const actualKeyboardWidth = cols * keySize + (cols - 1) * keyGap;
+            const actualKeyboardDepth = rows * keySize + (rows - 1) * keyGap;
+            
+            // Starting position (top-left corner of key grid) relative to keyboardBase center
+            const keyGridStartX = -actualKeyboardWidth / 2 + keySize / 2;
+            const keyGridStartZ = -actualKeyboardDepth / 2 + keySize / 2;
+            
+            // Special keys mapping using only integer widths summing to 'cols' (15)
+            const specialKeys = {
+                // Format: [row, startCol, width]
+                // Row 0: 13 * 1 + 2 = 15
+                backspace: [0, 13, 2],    // Cols 13-14
+
+                // Row 1: 2 + 11 * 1 + 2 = 15
+                tab: [1, 0, 2],         // Cols 0-1
+                backslash: [1, 13, 2],  // Cols 13-14
+
+                // Row 2: 2 + 11 * 1 + 2 = 15
+                caps: [2, 0, 2],          // Cols 0-1
+                enter_upper: [2, 13, 2], // Placeholder if Enter spans rows, adjust if needed
+
+                // Row 3: 13 * 1 + 2 = 15 (Assuming simple Enter)
+                enter: [3, 13, 2],        // Cols 13-14
+
+                // Row 4: 2 + 11 * 1 + 2 = 15
+                shift_left: [4, 0, 2],      // Cols 0-1
+                shift_right: [4, 13, 2],     // Cols 13-14
+
+                // Row 5: 2 + 1 + 2 + 6 + 2 + 2 = 15
+                ctrl_left: [5, 0, 2],     // Cols 0-1
+                fn: [5, 2, 1],            // Col 2
+                alt_left: [5, 3, 2],      // Cols 3-4
+                spacebar: [5, 5, 6],        // Cols 5-10
+                alt_gr: [5, 11, 2],     // Cols 11-12
+                ctrl_right: [5, 13, 2],    // Cols 13-14
+            };
+            
+            // Function to check if a position is part of a special key
+            // Add explicit return type annotation
+            const isSpecialKeyPosition = (row: number, col: number): false | { key: string; startCol: number; width: number; } => {
+                for (const [key, [keyRow, keyStartCol, keyWidth]] of Object.entries(specialKeys)) {
+                    if (row === keyRow && col >= keyStartCol && col < keyStartCol + keyWidth) {
+                        // Ensure the returned object matches the type annotation
+                        return { key: key as string, startCol: keyStartCol as number, width: keyWidth as number };
+                    }
+                }
+                return false;
+            };
+            
+            // Create all keys in grid using the calculated keySize
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    // Check if this position is part of a special key
+                    const specialKey = isSpecialKeyPosition(row, col);
+                    
+                    // If it's a subsequent cell of a multi-cell special key, skip it
+                    // This check should now work correctly with the explicit type
+                    if (specialKey && col > specialKey.startCol) continue;
+                    
+                    // Determine key width (special keys may be wider, based on calculated keySize)
+                    // This check should now work correctly
+                    const keyWidth = specialKey ? specialKey.width * keySize + (specialKey.width - 1) * keyGap : keySize;
+                    
+                    // Create key geometry based on the calculated key size
+                    const keyGeometry = new THREE.BoxGeometry(keyWidth, keyHeight, keySize);
+                    // keyGeometry.translate(0, keyHeight / 2, 0); // Keep origin at center for easier positioning
+                    
+                    // Create key material - slightly different shade for special keys
+                    const keyMaterial = materials.keyCap.clone();
+                    // This check should now work correctly
+                    if (specialKey) {
+                        // Adjust color for special keys
+                        keyMaterial.color.multiplyScalar(1.1); // Make special keys slightly brighter
+                    }
+                    
+                    const key = new THREE.Mesh(keyGeometry, keyMaterial);
+                    
+                    // Position the key in grid using calculated keySize and keyGap
+                    // This check should now work correctly
+                    const xOffset = specialKey ? 
+                        (specialKey.width - 1) * (keySize + keyGap) / 2 : 0;
+                    
+                    // Calculate position relative to keyboardBase center
+                    const relativeX = keyGridStartX + col * (keySize + keyGap) + xOffset;
+                    const relativeZ = keyGridStartZ + row * (keySize + keyGap);
+
+                    // Position key relative to baseGroup origin, sitting on top of keyboardBase
+                    key.position.set(
+                        keyboardBase.position.x + relativeX, 
+                        baseSurfaceY + keyboardBaseThickness + keyHeight/2, // Sits on keyboard base
+                        keyboardBase.position.z + relativeZ
+                    );
+                    keyboardGroup.add(key);
+                }
+            }
+            
+            // Position touchpad within the adjusted bottomGap area
+            const touchpadThickness = 0.05;
+            const touchpadWidth = baseWidth * 0.4; 
+            // Adjust touchpad height to fit nicely within the *new* larger bottom gap
+            const touchpadHeight = bottomGap * 0.7; // Keep it relative to the gap size
+            
+            // Calculate touchpad Z position: Center it vertically within the *new* bottom gap space
+            const touchpadCenterZ = keyboardBase.position.z + keyboardDepth / 2 + bottomGap / 2; // Uses new keyboardBase.position and bottomGap
+            
+            const touchpadGeometry = new THREE.BoxGeometry(touchpadWidth, touchpadThickness, touchpadHeight);
+            const touchpad = new THREE.Mesh(touchpadGeometry, materials.touchpad);
+            
+            // Position touchpad centered horizontally with keyboardBase, and vertically within the *new* bottom gap
+            touchpad.position.set(
+                keyboardBase.position.x, 
+                baseSurfaceY + keyboardBaseThickness + touchpadThickness/2, 
+                touchpadCenterZ // Uses recalculated Z position
+            );
+            keyboardGroup.add(touchpad);
+            
+            // Add the keyboard group to the baseGroup
+            baseGroup.add(keyboardGroup);
+
+            // Ensure no unexpected rotations
+            baseGroup.rotation.x = 0; 
+            keyboardGroup.rotation.x = 1.55; // Keep this rotation
+
             return laptop; // Return the main laptop group
         };
 
