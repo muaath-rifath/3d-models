@@ -343,7 +343,7 @@ export default function Laptop() {
             // Y position relative to displayGroup origin (bottom edge is Y=0)
             // Position near the top edge of the dashboard area
             const dashboardTopY = screenBezel + screenHeight; // Top Y of the screen area within the lid
-            const punchHoleY = dashboardTopY - 0.6; // Place camera near the top
+            const punchHoleY = dashboardTopY + 0.3; // Place camera near the top
 
             const punchHolePath = new THREE.Path();
             punchHolePath.absarc(punchHoleX, punchHoleY, punchHoleRadius, 0, Math.PI * 2, false);
@@ -580,8 +580,8 @@ export default function Laptop() {
             const keyboardWidth = baseWidth - sideGap * 2; // Width available for keyboard background and keys
             const keyboardDepth = baseDepth - topGap - bottomGap - 7; // Depth available for keyboard background and keys
             
-            // Define keyboard base thickness (visual recess)
-            const keyboardBaseThickness = 0.5;
+            // Define keyboard base thickness (visual recess) - make it very thin
+            const keyboardBaseThickness = 0.01; // Minimal thickness
             
             // Create keyboard background geometry using calculated dimensions
             const keyboardBaseGeometry = new THREE.BoxGeometry(keyboardWidth, keyboardBaseThickness, keyboardDepth);
@@ -596,10 +596,11 @@ export default function Laptop() {
             
             // Position keyboard base centered within the base, respecting the adjusted gaps
             const baseSurfaceY = baseHeight / 2; // Top surface Y of the main base in local space
+            // Position keyboard base slightly below the main surface
             keyboardBase.position.set(
                 0, 
-                baseSurfaceY + keyboardBaseThickness/2, 
-                -baseDepth/2 + topGap + keyboardDepth/2 // Position based on *new* topGap and calculated depth
+                baseSurfaceY - keyboardBaseThickness / 2, // Center slightly below base surface
+                -baseDepth/2 + topGap + keyboardDepth/2 
             );
             keyboardGroup.add(keyboardBase);
             
@@ -703,10 +704,11 @@ export default function Laptop() {
                     const relativeX = keyGridStartX + col * (keySize + keyGap) + xOffset;
                     const relativeZ = keyGridStartZ + row * (keySize + keyGap);
 
-                    // Position key relative to baseGroup origin, sitting on top of keyboardBase
+                    // Position key relative to baseGroup origin, bottom effectively starting at baseSurfaceY
+                    // Ignore keyboardBaseThickness for Y positioning to keep keys closer to the base
                     key.position.set(
                         keyboardBase.position.x + relativeX, 
-                        baseSurfaceY + keyboardBaseThickness + keyHeight/2, // Sits on keyboard base
+                        baseSurfaceY + keyHeight / 2, // Position relative to baseSurfaceY
                         keyboardBase.position.z + relativeZ
                     );
                     keyboardGroup.add(key);
@@ -714,21 +716,23 @@ export default function Laptop() {
             }
             
             // Position touchpad within the adjusted bottomGap area
-            const touchpadThickness = 0.05;
+            const touchpadThickness = 0.1; // Keep touchpad very thin
             const touchpadWidth = baseWidth * 0.4; 
             // Adjust touchpad height to fit nicely within the *new* larger bottom gap
-            const touchpadHeight = bottomGap * 0.7; // Keep it relative to the gap size
+            const touchpadHeight = bottomGap * 6; // Keep it relative to the gap size
             
-            // Calculate touchpad Z position: Center it vertically within the *new* bottom gap space
-            const touchpadCenterZ = keyboardBase.position.z + keyboardDepth / 2 + bottomGap / 2; // Uses new keyboardBase.position and bottomGap
+            // Calculate touchpad Z position: Shift it further down within the bottom gap space
+            // Instead of centering (bottomGap / 2), use a larger fraction (e.g., 0.6 or 0.7) to move it down.
+            const touchpadCenterZ =   keyboardDepth / 2.5 + bottomGap * 0.9; // Shifted down
             
             const touchpadGeometry = new THREE.BoxGeometry(touchpadWidth, touchpadThickness, touchpadHeight);
             const touchpad = new THREE.Mesh(touchpadGeometry, materials.touchpad);
             
-            // Position touchpad centered horizontally with keyboardBase, and vertically within the *new* bottom gap
+            // Position touchpad centered horizontally, bottom effectively starting at baseSurfaceY
+            // Ignore keyboardBaseThickness for Y positioning
             touchpad.position.set(
                 keyboardBase.position.x, 
-                baseSurfaceY + keyboardBaseThickness + touchpadThickness/2, 
+                baseSurfaceY + touchpadThickness / 2, // Position relative to baseSurfaceY
                 touchpadCenterZ // Uses recalculated Z position
             );
             keyboardGroup.add(touchpad);
@@ -737,8 +741,8 @@ export default function Laptop() {
             baseGroup.add(keyboardGroup);
 
             // Ensure no unexpected rotations
-            baseGroup.rotation.x = 0; 
-            keyboardGroup.rotation.x = 1.55; // Keep this rotation
+            baseGroup.rotation.x = - 1.55; 
+            keyboardGroup.rotation.x = 1.58; // Keep this rotation
 
             return laptop; // Return the main laptop group
         };
