@@ -2,7 +2,6 @@
 import { useEffect, useState, useRef, useCallback } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
-import styles from './styles.module.css';
 
 export default function MotorActuator() {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -457,12 +456,16 @@ export default function MotorActuator() {
   }
   
   return (
-    <div className={styles.container}>
-      <div ref={containerRef} className={styles.viewer}></div>
-      <div className={styles.controls}>
+    <div className="relative w-full h-screen">
+      <div ref={containerRef} className="w-full h-full"></div>
+      <div className="absolute bottom-5 right-5 flex gap-2.5">
         <button 
           onClick={() => setIsDarkMode(!isDarkMode)}
-          className={`${styles.toggleButton} ${isDarkMode ? styles.toggleButtonDark : styles.toggleButtonLight}`}
+          className={`px-5 py-2.5 border-none rounded cursor-pointer transition-all duration-200 ${
+            isDarkMode 
+              ? 'bg-gray-800 text-white hover:bg-gray-700' 
+              : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+          }`}
         >
           Toggle {isDarkMode ? 'Light' : 'Dark'} Mode
         </button>
