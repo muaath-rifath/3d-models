@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
@@ -23,36 +23,43 @@ interface WaveEmitter {
   color: THREE.Color;
 }
 
-export default function VehicleIoTGateway() {
+type VehicleIoTGatewayProps = {
+  isDarkMode?: boolean;
+  width?: number;
+  height?: number;
+}
+
+export default function VehicleIoTGateway({ isDarkMode = false, width = 500, height = 400 }: VehicleIoTGatewayProps) {
   const mountRef = useRef<HTMLDivElement>(null);
-  const [isDarkMode, setIsDarkMode] = useState(true);
+  const sceneRef = useRef<THREE.Scene | null>(null);
+  const gatewayRef = useRef<THREE.Group | null>(null);
   
   useEffect(() => {
     // Define this variable at the top of the useEffect function
     let displayUpdateInterval: NodeJS.Timeout | undefined;
 
+    if (!mountRef.current) return;
+    
     // Scene, camera, and renderer setup
     const scene = new THREE.Scene();
-    // Use a soft green-gray instead of blue-gray for light mode, but remove fog
+    // Use a soft green-gray instead of blue-gray for light mode
     scene.background = new THREE.Color(isDarkMode ? 0x0a1a20 : 0xe0f0e8);
+    sceneRef.current = scene;
     
     const camera = new THREE.PerspectiveCamera(
       45, 
-      window.innerWidth / window.innerHeight, 
+      width / height, 
       0.1, 
-      1000 // Increased far clipping plane for better visibility at distance
+      1000
     );
     camera.position.set(0, 15, 30);
     
     const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setSize(width, height);
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     
-    // Mount the renderer to the DOM
-    if (mountRef.current) {
-      mountRef.current.appendChild(renderer.domElement);
-    }
+    mountRef.current.appendChild(renderer.domElement);
     
     // Controls
     const controls = new OrbitControls(camera, renderer.domElement);
@@ -62,10 +69,10 @@ export default function VehicleIoTGateway() {
     controls.maxDistance = 100;
     
     // Lighting
-    const ambientLight = new THREE.AmbientLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.7); // Increased intensity
+    const ambientLight = new THREE.AmbientLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.7);
     scene.add(ambientLight);
     
-    const directionalLight = new THREE.DirectionalLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 1.0); // Increased intensity
+    const directionalLight = new THREE.DirectionalLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 1.0);
     directionalLight.position.set(5, 10, 5);
     directionalLight.castShadow = true;
     directionalLight.shadow.mapSize.width = 2048;
@@ -78,21 +85,23 @@ export default function VehicleIoTGateway() {
     directionalLight2.position.set(-5, 8, -10);
     scene.add(directionalLight2);
     
-    const pointLight = new THREE.PointLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.7); // Increased intensity
+    const pointLight = new THREE.PointLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.7);
     pointLight.position.set(-5, 5, -5);
     scene.add(pointLight);
     
     // Materials
     const mainBodyMaterial = new THREE.MeshStandardMaterial({
-      color: isDarkMode ? 0x1a2e20 : 0xc0e8d0, // Softer green for light mode
+      color: isDarkMode ? 0x1a2e20 : 0xc0e8d0,
       roughness: 0.7,
-      metalness: 0.3
+      metalness: 0.3,
+      name: 'main_body'
     });
     
     const antennaBaseMaterial = new THREE.MeshStandardMaterial({
       color: isDarkMode ? 0x8fffaa : 0x009977,
       roughness: 0.3,
-      metalness: 0.7
+      metalness: 0.7,
+      name: 'antenna_base'
     });
     
     const screenMaterial = new THREE.MeshStandardMaterial({
@@ -100,51 +109,47 @@ export default function VehicleIoTGateway() {
       roughness: 0.2,
       metalness: 0.8,
       emissive: isDarkMode ? 0x00ffaa : 0x00aa88,
-      emissiveIntensity: isDarkMode ? 0.5 : 0.3
+      emissiveIntensity: isDarkMode ? 0.5 : 0.3,
+      name: 'screen'
     });
     
     const mountingMaterial = new THREE.MeshStandardMaterial({
       color: isDarkMode ? 0x44ff66 : 0x006644,
       roughness: 0.3,
-      metalness: 0.7
+      metalness: 0.7,
+      name: 'mounting'
     });
     
     const connectorMaterial = new THREE.MeshStandardMaterial({
       color: 0x333333,
       roughness: 0.4,
-      metalness: 0.7
+      metalness: 0.7,
+      name: 'connector'
     });
     
     const rubberizerMaterial = new THREE.MeshStandardMaterial({
       color: 0x444444,
       roughness: 0.9,
-      metalness: 0.1
-    });
-    
-    const glassMaterial = new THREE.MeshPhysicalMaterial({
-      color: 0x88ccff,
-      roughness: 0.1,
-      metalness: 0.9,
-      transparent: true,
-      opacity: 0.7,
-      clearcoat: 1.0,
-      clearcoatRoughness: 0.1
+      metalness: 0.1,
+      name: 'rubberizer'
     });
     
     const vehiclePowerMaterial = new THREE.MeshStandardMaterial({
       color: 0x111111,
       roughness: 0.2,
-      metalness: 0.9
+      metalness: 0.9,
+      name: 'vehicle_power'
     });
     
     // Dimensions (12cm length, 8cm width, 3cm height - scaled up for visibility)
     const length = 12;
-    const width = 8;
-    const height = 3;
+    const deviceWidth = 8;
+    const deviceHeight = 3;
     
     // Gateway body
     const gatewayGroup = new THREE.Group();
     scene.add(gatewayGroup);
+    gatewayRef.current = gatewayGroup;
     
     // Main body - rugged box with rounded edges
     const mainBody = (() => {
@@ -152,7 +157,7 @@ export default function VehicleIoTGateway() {
       const bodyGroup = new THREE.Group();
       
       // Create base box
-      const bodyGeometry = new THREE.BoxGeometry(length, height, width);
+      const bodyGeometry = new THREE.BoxGeometry(length, deviceHeight, deviceWidth);
       const body = new THREE.Mesh(bodyGeometry, mainBodyMaterial);
       body.castShadow = true;
       body.receiveShadow = true;
@@ -174,8 +179,8 @@ export default function VehicleIoTGateway() {
       
       // Vertical edges
       const halfLength = length / 2;
-      const halfWidth = width / 2;
-      const halfHeight = height / 2;
+      const halfWidth = deviceWidth / 2;
+      const halfHeight = deviceHeight / 2;
       
       // Front vertical edges
       addEdge(halfLength - edgeRadius, 0, halfWidth - edgeRadius, 0, 0, 0, height);
@@ -283,11 +288,10 @@ export default function VehicleIoTGateway() {
       antennaGroup.add(housing);
       
       // Store wave emission points and their data
-      const waveEmitters: WaveEmitter[] = [];
       const waveGroups: WaveEmitter[] = [];
       
       // Cellular antenna (tallest)
-      const createAntenna = (x: number, z: number, height: number, label: string, waveColor: THREE.Color) => {
+      const createAntenna = (x: number, z: number, height: number, protocolName: string, waveColor: THREE.Color) => {
         const subGroup = new THREE.Group();
         
         // Antenna base
@@ -317,35 +321,10 @@ export default function VehicleIoTGateway() {
           group: waveGroup,
           waves: [],
           nextWaveTime: 0,
-          protocol: label,
+          protocol: protocolName,
           interval: 1500 + Math.random() * 1000, // Random interval between 1.5-2.5 seconds
           color: waveColor
         });
-        
-        // Label
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.width = 64;
-        canvas.height = 32;
-        
-        if (context) {
-          context.fillStyle = isDarkMode ? '#ccddee' : '#335544'; // Greenish text for light mode
-          context.font = '12px Arial';
-          context.fillText(label, 5, 20);
-          
-          const texture = new THREE.CanvasTexture(canvas);
-          const material = new THREE.MeshBasicMaterial({
-            map: texture,
-            transparent: true,
-            side: THREE.DoubleSide
-          });
-          
-          const labelGeometry = new THREE.PlaneGeometry(1, 0.5);
-          const labelMesh = new THREE.Mesh(labelGeometry, material);
-          labelMesh.position.set(0, 0.5, 0.5);
-          labelMesh.rotation.x = -Math.PI / 6;
-          subGroup.add(labelMesh);
-        }
         
         subGroup.position.set(x, halfHeight + 0.8, z);
         return subGroup;
@@ -378,7 +357,8 @@ export default function VehicleIoTGateway() {
           metalness: 0.3,
           roughness: 0.4,
           emissive: color,
-          emissiveIntensity: 0.3
+          emissiveIntensity: 0.3,
+          name: 'wave'
         });
         
         const wave = new THREE.Mesh(ringGeometry, waveMaterial);
@@ -525,59 +505,7 @@ export default function VehicleIoTGateway() {
           context.lineWidth = 4;
           context.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
           
-          // Title
-          context.font = 'bold 24px Arial';
-          context.fillStyle = isDarkMode ? '#00ffaa' : '#00aa88';
-          context.textAlign = 'center';
-          context.fillText("VEHICLE IoT GATEWAY", canvas.width / 2, 35);
-          
-          // Connection indicators
-          const drawConnectionBar = (y: number, label: string, strength: number) => {
-            const barWidth = 150;
-            const barHeight = 15;
-            const x = 120;
-            
-            // Label
-            context.font = '16px Arial';
-            context.fillStyle = '#ccddee'; // Changed from #ffffff
-            context.textAlign = 'left';
-            context.fillText(label, 20, y + 5);
-            
-            // Background bar
-            context.fillStyle = '#333333';
-            context.fillRect(x, y - barHeight / 2, barWidth, barHeight);
-            
-            // Active bar
-            context.fillStyle = strength > 70 ? '#00ff00' : strength > 30 ? '#ffff00' : '#ff0000';
-            context.fillRect(x, y - barHeight / 2, barWidth * (strength / 100), barHeight);
-            
-            // Strength text
-            context.font = '12px Arial';
-            context.fillStyle = '#ccddee'; // Changed from #ffffff
-            context.textAlign = 'left';
-            context.fillText(`${Math.round(strength)}%`, x + barWidth + 10, y + 4);
-          };
-          
-          // Current time
-          const now = new Date();
-          context.font = '16px Arial';
-          context.fillStyle = '#ccddee'; // Changed from #ffffff
-          context.textAlign = 'right';
-          context.fillText(now.toLocaleTimeString(), canvas.width - 20, 35);
-          
-          // Draw connection bars with simulated fluctuating strength
-          const time = Date.now() / 1000;
-          const cellStrength = 75 + 15 * Math.sin(time * 0.3);
-          const gpsStrength = 85 + 10 * Math.sin(time * 0.2 + 1);
-          const wifiStrength = 60 + 20 * Math.sin(time * 0.4 + 2);
-          const vehicleStrength = 95 + 5 * Math.sin(time * 0.1);
-          
-          drawConnectionBar(80, "CELL", cellStrength);
-          drawConnectionBar(110, "GPS", gpsStrength);
-          drawConnectionBar(140, "WIFI", wifiStrength);
-          drawConnectionBar(170, "VEHICLE", vehicleStrength);
-          
-          // Status indicator
+          // Draw UI elements
           context.font = 'bold 16px Arial';
           context.fillStyle = '#00ff00';
           context.textAlign = 'center';
@@ -590,7 +518,8 @@ export default function VehicleIoTGateway() {
             emissive: isDarkMode ? 0x00ffaa : 0x00aa88,
             emissiveIntensity: isDarkMode ? 0.5 : 0.3,
             roughness: 0.2,
-            metalness: 0.8
+            metalness: 0.8,
+            name: 'screen'
           });
         }
       };
@@ -617,30 +546,6 @@ export default function VehicleIoTGateway() {
       simSlot.rotation.z = Math.PI / 2;
       slotGroup.add(simSlot);
       
-      // SIM card label
-      const simCanvas = document.createElement('canvas');
-      const simContext = simCanvas.getContext('2d');
-      simCanvas.width = 128;
-      simCanvas.height = 64;
-      
-      if (simContext) {
-        simContext.fillStyle = isDarkMode ? '#ccddee' : '#335544'; // Greenish text for light mode
-        simContext.font = '14px Arial';
-        simContext.fillText("SIM", 10, 20);
-        
-        const simTexture = new THREE.CanvasTexture(simCanvas);
-        const simLabelMaterial = new THREE.MeshBasicMaterial({
-          map: simTexture,
-          transparent: true
-        });
-        
-        const simLabelGeometry = new THREE.PlaneGeometry(0.8, 0.4);
-        const simLabel = new THREE.Mesh(simLabelGeometry, simLabelMaterial);
-        simLabel.position.set(-length/2 + 1.5, 0.9, width/2 + 0.05);
-        simLabel.rotation.y = Math.PI / 2;
-        slotGroup.add(simLabel);
-      }
-      
       // SD card slot
       const sdSlotGeometry = new THREE.BoxGeometry(2.2, 0.3, 1.2);
       const sdSlot = new THREE.Mesh(sdSlotGeometry, connectorMaterial);
@@ -648,30 +553,6 @@ export default function VehicleIoTGateway() {
       sdSlot.rotation.y = Math.PI / 2;
       sdSlot.rotation.z = Math.PI / 2;
       slotGroup.add(sdSlot);
-      
-      // SD card label
-      const sdCanvas = document.createElement('canvas');
-      const sdContext = sdCanvas.getContext('2d');
-      sdCanvas.width = 128;
-      sdCanvas.height = 64;
-      
-      if (sdContext) {
-        sdContext.fillStyle = isDarkMode ? '#ccddee' : '#335544'; // Greenish text for light mode
-        sdContext.font = '14px Arial';
-        sdContext.fillText("SD", 10, 20);
-        
-        const sdTexture = new THREE.CanvasTexture(sdCanvas);
-        const sdLabelMaterial = new THREE.MeshBasicMaterial({
-          map: sdTexture,
-          transparent: true
-        });
-        
-        const sdLabelGeometry = new THREE.PlaneGeometry(0.8, 0.4);
-        const sdLabel = new THREE.Mesh(sdLabelGeometry, sdLabelMaterial);
-        sdLabel.position.set(-length/2 + 1.5, -1, width/2 + 0.05);
-        sdLabel.rotation.y = Math.PI / 2;
-        slotGroup.add(sdLabel);
-      }
       
       return slotGroup;
     })();
@@ -703,30 +584,6 @@ export default function VehicleIoTGateway() {
       cable.rotation.z = Math.PI / 2;
       powerGroup.add(cable);
       
-      // "12V-24V" label
-      const voltageCanvas = document.createElement('canvas');
-      const voltageContext = voltageCanvas.getContext('2d');
-      voltageCanvas.width = 128;
-      voltageCanvas.height = 64;
-      
-      if (voltageContext) {
-        voltageContext.fillStyle = isDarkMode ? '#ccddee' : '#335544'; // Greenish text
-        voltageContext.font = '16px Arial';
-        voltageContext.fillText("12-24V", 10, 30);
-        
-        const voltageTexture = new THREE.CanvasTexture(voltageCanvas);
-        const voltageLabelMaterial = new THREE.MeshBasicMaterial({
-          map: voltageTexture,
-          transparent: true
-        });
-        
-        const voltageLabelGeometry = new THREE.PlaneGeometry(1.5, 0.7);
-        const voltageLabel = new THREE.Mesh(voltageLabelGeometry, voltageLabelMaterial);
-        voltageLabel.position.set(-length/2 - 1, 1, -width/4);
-        voltageLabel.rotation.y = Math.PI / 2;
-        powerGroup.add(voltageLabel);
-      }
-      
       return powerGroup;
     })();
     
@@ -736,7 +593,7 @@ export default function VehicleIoTGateway() {
     const antennaPorts = (() => {
       const portGroup = new THREE.Group();
       
-      const createAntennaPort = (x: number, z: number, label: string) => {
+      const createAntennaPort = (x: number, z: number) => {
         const subGroup = new THREE.Group();
         
         // Port base
@@ -752,38 +609,14 @@ export default function VehicleIoTGateway() {
         connector.position.z = -0.2;
         subGroup.add(connector);
         
-        // Label
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.width = 64;
-        canvas.height = 32;
-        
-        if (context) {
-          context.fillStyle = isDarkMode ? '#ccddee' : '#335544'; // Greenish text for light mode
-          context.font = '10px Arial';
-          context.fillText(label, 5, 15);
-          
-          const texture = new THREE.CanvasTexture(canvas);
-          const material = new THREE.MeshBasicMaterial({
-            map: texture,
-            transparent: true
-          });
-          
-          const labelGeometry = new THREE.PlaneGeometry(0.8, 0.4);
-          const labelMesh = new THREE.Mesh(labelGeometry, material);
-          labelMesh.position.set(0, 0.5, 0);
-          labelMesh.rotation.x = -Math.PI / 2;
-          subGroup.add(labelMesh);
-        }
-        
         subGroup.position.set(x, z, -width/2 - 0.01);
         return subGroup;
       };
       
       // Add antenna ports to the back side
-      portGroup.add(createAntennaPort(-length/4, 1, "ANT1"));
-      portGroup.add(createAntennaPort(0, 1, "ANT2"));
-      portGroup.add(createAntennaPort(length/4, 1, "ANT3"));
+      portGroup.add(createAntennaPort(-length/4, 1));
+      portGroup.add(createAntennaPort(0, 1));
+      portGroup.add(createAntennaPort(length/4, 1));
       
       return portGroup;
     })();
@@ -794,7 +627,7 @@ export default function VehicleIoTGateway() {
     const mountingOptions = (() => {
       const mountGroup = new THREE.Group();
       
-      // Bracket mount - this will be our permanent mount
+      // Bracket mount
       const bracketGroup = new THREE.Group();
       
       // Horizontal part
@@ -838,7 +671,6 @@ export default function VehicleIoTGateway() {
       hole4.rotation.x = Math.PI / 2;
       bracketGroup.add(hole4);
       
-      // Add the bracket mount to the group
       mountGroup.add(bracketGroup);
       
       return mountGroup;
@@ -856,7 +688,8 @@ export default function VehicleIoTGateway() {
         const ledMaterial = new THREE.MeshStandardMaterial({
           color: color,
           emissive: color,
-          emissiveIntensity: 0.8
+          emissiveIntensity: 0.8,
+          name: 'led'
         });
         
         const led = new THREE.Mesh(ledGeometry, ledMaterial);
@@ -887,9 +720,9 @@ export default function VehicleIoTGateway() {
     
     // Handle resize
     const handleResize = () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.aspect = width / height;
       camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setSize(width, height);
     };
     
     window.addEventListener('resize', handleResize);
@@ -909,27 +742,6 @@ export default function VehicleIoTGateway() {
     
     animate();
     
-    // Toggle dark mode function
-    const toggleDarkModeHandler = document.createElement('button');
-    toggleDarkModeHandler.textContent = 'Toggle Dark/Light Mode';
-    toggleDarkModeHandler.style.position = 'absolute';
-    toggleDarkModeHandler.style.top = '20px';
-    toggleDarkModeHandler.style.left = '20px';
-    toggleDarkModeHandler.style.padding = '10px';
-    toggleDarkModeHandler.style.backgroundColor = isDarkMode ? '#333' : '#497'; // Greenish background for light mode
-    toggleDarkModeHandler.style.color = isDarkMode ? '#dfe6f0' : '#e0f0e8'; // Match scene background
-    toggleDarkModeHandler.style.border = 'none';
-    toggleDarkModeHandler.style.borderRadius = '5px';
-    toggleDarkModeHandler.style.cursor = 'pointer';
-    
-    toggleDarkModeHandler.onclick = () => {
-      setIsDarkMode(!isDarkMode);
-    };
-    
-    if (mountRef.current) {
-      mountRef.current.appendChild(toggleDarkModeHandler);
-    }
-    
     // Cleanup function
     return () => {
       if (displayUpdateInterval) {
@@ -938,24 +750,14 @@ export default function VehicleIoTGateway() {
       
       if (mountRef.current) {
         mountRef.current.removeChild(renderer.domElement);
-        
-        // Remove any buttons we've added
-        const buttons = mountRef.current.querySelectorAll('button');
-        buttons.forEach(button => {
-          if (mountRef.current?.contains(button)) {
-            mountRef.current.removeChild(button);
-          }
-        });
       }
       
       window.removeEventListener('resize', handleResize);
       controls.dispose();
     };
-  }, [isDarkMode]);
+  }, [isDarkMode, width, height]);
   
   return (
-    <div className="relative w-full h-screen">
-      <div ref={mountRef} className="w-full h-full"></div>
-    </div>
+    <div ref={mountRef} style={{ width, height }} />
   );
 }
