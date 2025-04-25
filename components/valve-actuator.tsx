@@ -33,8 +33,6 @@ export default function SmartWaterValve({ isDarkMode = false, width = 500, heigh
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     currentMount.appendChild(renderer.domElement);
 
     // Add orbit controls
@@ -58,8 +56,6 @@ export default function SmartWaterValve({ isDarkMode = false, width = 500, heigh
     });
     const valveBody = new THREE.Mesh(valveBodyGeometry, valveBodyMaterial);
     valveBody.rotation.z = Math.PI / 2; // Rotate to horizontal position
-    valveBody.castShadow = true;
-    valveBody.receiveShadow = true;
     valveNode.add(valveBody);
 
     // Create connecting pipes
@@ -75,16 +71,12 @@ export default function SmartWaterValve({ isDarkMode = false, width = 500, heigh
     const leftPipe = new THREE.Mesh(pipeGeometry, pipeMaterial);
     leftPipe.position.set(-1.0, 0, 0);
     leftPipe.rotation.z = Math.PI / 2;
-    leftPipe.castShadow = true;
-    leftPipe.receiveShadow = true;
     valveNode.add(leftPipe);
     
     // Right pipe
     const rightPipe = new THREE.Mesh(pipeGeometry, pipeMaterial);
     rightPipe.position.set(1.0, 0, 0);
     rightPipe.rotation.z = Math.PI / 2;
-    rightPipe.castShadow = true;
-    rightPipe.receiveShadow = true;
     valveNode.add(rightPipe);
     
     // Create valve actuator housing (main body for the electronics)
@@ -97,8 +89,6 @@ export default function SmartWaterValve({ isDarkMode = false, width = 500, heigh
     });
     const actuatorHousing = new THREE.Mesh(housingGeometry, housingMaterial);
     actuatorHousing.position.set(0, 0.7, 0);
-    actuatorHousing.castShadow = true;
-    actuatorHousing.receiveShadow = true;
     valveNode.add(actuatorHousing);
     
     // Create electronic display
@@ -113,8 +103,6 @@ export default function SmartWaterValve({ isDarkMode = false, width = 500, heigh
     });
     const display = new THREE.Mesh(displayGeometry, displayMaterial);
     display.position.set(0, 0.7, 0.51);
-    display.castShadow = false; // Usually displays don't cast shadows
-    display.receiveShadow = false;
     valveNode.add(display);
     
     // Create status LED
@@ -165,7 +153,6 @@ export default function SmartWaterValve({ isDarkMode = false, width = 500, heigh
     const handle = new THREE.Mesh(handleGeometry, handleMaterial);
     handle.position.set(0, 0, 0.3);
     handle.rotation.x = Math.PI / 2;
-    handle.castShadow = true;
     valveNode.add(handle);
     
     // Create flow indicator arrows
@@ -216,23 +203,7 @@ export default function SmartWaterValve({ isDarkMode = false, width = 500, heigh
       isDarkMode ? 0.7 : 0.9
     );
     mainLight.position.set(10, 10, 10);
-    mainLight.castShadow = true;
-    mainLight.shadow.mapSize.width = 1024;
-    mainLight.shadow.mapSize.height = 1024;
     scene.add(mainLight);
-    
-    // Create ground plane to receive shadows
-    const groundGeometry = new THREE.PlaneGeometry(20, 20);
-    const groundMaterial = new THREE.MeshStandardMaterial({
-      color: isDarkMode ? 0x223322 : 0xd8e8d8,
-      roughness: 0.9,
-      metalness: 0
-    });
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -2;
-    ground.receiveShadow = true;
-    scene.add(ground);
     
     // Animation loop
     const animate = () => {

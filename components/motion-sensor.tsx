@@ -33,8 +33,8 @@ export default function MotionSensor({ isDarkMode = false, width = 500, height =
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    // Disable shadows
+    renderer.shadowMap.enabled = false; 
     // Enable clipping for the entire scene
     renderer.localClippingEnabled = true;
     currentMount.appendChild(renderer.domElement);
@@ -58,8 +58,6 @@ export default function MotionSensor({ isDarkMode = false, width = 500, height =
       name: 'pcb'
     });
     const pcb = new THREE.Mesh(pcbGeometry, pcbMaterial);
-    pcb.castShadow = true;
-    pcb.receiveShadow = true;
     sensorNode.add(pcb);
     
     // Create motion sensor dome
@@ -74,7 +72,6 @@ export default function MotionSensor({ isDarkMode = false, width = 500, height =
     });
     const dome = new THREE.Mesh(domeGeometry, domeMaterial);
     dome.position.y = 0.7;
-    dome.castShadow = true;
     sensorNode.add(dome);
     
     // Create PIR sensor inside the dome
@@ -87,7 +84,6 @@ export default function MotionSensor({ isDarkMode = false, width = 500, height =
     });
     const pir = new THREE.Mesh(pirGeometry, pirMaterial);
     pir.position.y = 0.4;
-    pir.castShadow = true;
     sensorNode.add(pir);
     
     // Create motion detection area (visualization)
@@ -114,7 +110,6 @@ export default function MotionSensor({ isDarkMode = false, width = 500, height =
     });
     const chip = new THREE.Mesh(chipGeometry, chipMaterial);
     chip.position.set(0.5, 0.1, 0.5);
-    chip.castShadow = true;
     sensorNode.add(chip);
     
     // Add status LED
@@ -171,23 +166,7 @@ export default function MotionSensor({ isDarkMode = false, width = 500, height =
       isDarkMode ? 0.7 : 0.9
     );
     mainLight.position.set(10, 10, 10);
-    mainLight.castShadow = true;
-    mainLight.shadow.mapSize.width = 1024;
-    mainLight.shadow.mapSize.height = 1024;
     scene.add(mainLight);
-    
-    // Create ground plane to receive shadows
-    const groundGeometry = new THREE.PlaneGeometry(20, 20);
-    const groundMaterial = new THREE.MeshStandardMaterial({
-      color: isDarkMode ? 0x223322 : 0xd8e8d8,
-      roughness: 0.9,
-      metalness: 0
-    });
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -2;
-    ground.receiveShadow = true;
-    scene.add(ground);
     
     // Animation loop to show motion detection area pulsing
     const animate = () => {

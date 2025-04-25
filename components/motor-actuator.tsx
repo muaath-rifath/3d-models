@@ -222,8 +222,7 @@ export default function MotorActuator({ isDarkMode = false, width = 500, height 
     // Renderer setup
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.shadowMap.enabled = false; // Disable shadows
     containerRef.current.appendChild(renderer.domElement);
     
     // Controls setup
@@ -243,9 +242,7 @@ export default function MotorActuator({ isDarkMode = false, width = 500, height 
       isDarkMode ? 0.7 : 0.9
     );
     directionalLight.position.set(10, 10, 10);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 1024;
-    directionalLight.shadow.mapSize.height = 1024;
+    directionalLight.castShadow = false; // Disable shadow casting
     scene.add(directionalLight);
     
     // Add point light for better highlights on metal parts
@@ -260,18 +257,18 @@ export default function MotorActuator({ isDarkMode = false, width = 500, height 
     // Create the motor model
     createMotor(isDarkMode);
     
-    // Add optional ground plane
-    const groundGeometry = new THREE.PlaneGeometry(100, 100);
-    const groundMaterial = new THREE.MeshStandardMaterial({ 
-      color: isDarkMode ? 0x223322 : 0xd8e8d8,
-      roughness: 0.9,
-      metalness: 0
-    });
-    const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-    ground.rotation.x = -Math.PI / 2;
-    ground.position.y = -8;
-    ground.receiveShadow = true;
-    scene.add(ground);
+    // Remove optional ground plane
+    // const groundGeometry = new THREE.PlaneGeometry(100, 100);
+    // const groundMaterial = new THREE.MeshStandardMaterial({ 
+    //   color: isDarkMode ? 0x223322 : 0xd8e8d8,
+    //   roughness: 0.9,
+    //   metalness: 0
+    // });
+    // const ground = new THREE.Mesh(groundGeometry, groundMaterial);
+    // ground.rotation.x = -Math.PI / 2;
+    // ground.position.y = -8;
+    // ground.receiveShadow = true; // No longer needed
+    // scene.add(ground);
     
     // Start animation loop
     let lastTime = 0;

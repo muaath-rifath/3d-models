@@ -36,8 +36,6 @@ export default function IoTGateway({ isDarkMode = false, width = 500, height = 4
     
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     
     // Mount the renderer to the DOM
     currentMount.appendChild(renderer.domElement);
@@ -59,7 +57,6 @@ export default function IoTGateway({ isDarkMode = false, width = 500, height = 4
       isDarkMode ? 0.7 : 0.9
     );
     directionalLight.position.set(5, 10, 5);
-    directionalLight.castShadow = true;
     scene.add(directionalLight);
     
     const pointLight = new THREE.PointLight(
@@ -82,8 +79,6 @@ export default function IoTGateway({ isDarkMode = false, width = 500, height = 4
     });
     const base = new THREE.Mesh(baseGeometry, baseMaterial);
     base.position.y = 1;
-    base.castShadow = true;
-    base.receiveShadow = true;
     gatewayGroup.add(base);
     
     // Top section with vents
@@ -96,8 +91,6 @@ export default function IoTGateway({ isDarkMode = false, width = 500, height = 4
     });
     const top = new THREE.Mesh(topGeometry, topMaterial);
     top.position.y = 2.5;
-    top.castShadow = true;
-    top.receiveShadow = true;
     gatewayGroup.add(top);
     
     // Add ventilation holes
@@ -245,6 +238,8 @@ export default function IoTGateway({ isDarkMode = false, width = 500, height = 4
     // Add gateway to scene
     scene.add(gatewayGroup);
     
+    // Remove the floor object
+    /* 
     // Add floor for shadow
     const floorGeometry = new THREE.PlaneGeometry(50, 50);
     const floorMaterial = new THREE.MeshStandardMaterial({
@@ -257,6 +252,7 @@ export default function IoTGateway({ isDarkMode = false, width = 500, height = 4
     floor.position.y = 0;
     floor.receiveShadow = true;
     scene.add(floor);
+    */
     
     // Animation loop
     const animate = () => {

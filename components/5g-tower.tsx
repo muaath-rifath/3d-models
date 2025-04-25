@@ -77,8 +77,8 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
         // Renderer setup
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(width, height);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        // Disable shadows
+        renderer.shadowMap.enabled = false; 
         mountRef.current.appendChild(renderer.domElement);
 
         // Controls setup
@@ -100,34 +100,14 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
           isDarkMode ? 0.7 : 0.9
         );
         directionalLight.position.set(50, 200, 100);
-        directionalLight.castShadow = true;
-        directionalLight.shadow.mapSize.width = 1024;
-        directionalLight.shadow.mapSize.height = 1024;
-        const d = 40;
-        directionalLight.shadow.camera.left = -d;
-        directionalLight.shadow.camera.right = d;
-        directionalLight.shadow.camera.top = d;
-        directionalLight.shadow.camera.bottom = -d;
+        // Disable shadows
+        directionalLight.castShadow = false; 
         scene.add(directionalLight);
 
         // Create 5G Tower
         const tower = createTower();
         scene.add(tower);
         towerRef.current = tower;
-
-        // Create ground
-        const groundGeometry = new THREE.PlaneGeometry(100, 100);
-        const groundMaterial = new THREE.MeshStandardMaterial({ 
-            color: isDarkMode ? 0x112211 : 0xccddcc,
-            roughness: 0.8,
-            metalness: 0.2,
-            side: THREE.DoubleSide
-        });
-        const ground = new THREE.Mesh(groundGeometry, groundMaterial);
-        ground.rotation.x = -Math.PI / 2;
-        ground.position.y = -0.5;
-        ground.receiveShadow = true;
-        scene.add(ground);
 
         // Create Tower function
         function createTower() {
@@ -175,8 +155,6 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
             const baseGeometry = new THREE.BoxGeometry(4, 1, 4);
             const base = new THREE.Mesh(baseGeometry, darkMetalMaterial);
             base.position.y = 0;
-            base.castShadow = true;
-            base.receiveShadow = true;
             towerGroup.add(base);
             
             // Tower main shaft
@@ -184,8 +162,6 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
             const shaftGeometry = new THREE.BoxGeometry(1.5, mainTowerHeight, 1.5);
             const shaft = new THREE.Mesh(shaftGeometry, metalMaterial);
             shaft.position.y = mainTowerHeight / 2 + 0.5;
-            shaft.castShadow = true;
-            shaft.receiveShadow = true;
             towerGroup.add(shaft);
             
             // Tower sections/supports
@@ -200,8 +176,6 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
             const platformGeometry = new THREE.CylinderGeometry(3, 3, 0.5, 8);
             const platform = new THREE.Mesh(platformGeometry, darkMetalMaterial);
             platform.position.y = mainTowerHeight + 1;
-            platform.castShadow = true;
-            platform.receiveShadow = true;
             towerGroup.add(platform);
             
             // Antennas & Equipment
@@ -248,8 +222,6 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
             // Horizontal supports
             const horizontalGeometry = new THREE.BoxGeometry(4, 0.3, 4);
             const horizontal = new THREE.Mesh(horizontalGeometry, darkMetalMaterial);
-            horizontal.castShadow = true;
-            horizontal.receiveShadow = true;
             sectionGroup.add(horizontal);
             
             // Diagonal supports
@@ -268,8 +240,6 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
                 diagonal.rotation.x = Math.PI / 4;
                 diagonal.rotation.y = -angle;
                 
-                diagonal.castShadow = true;
-                diagonal.receiveShadow = true;
                 sectionGroup.add(diagonal);
             }
             
@@ -284,16 +254,12 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
             // Main panel
             const panelGeometry = new THREE.BoxGeometry(0.5, 4, 1.5);
             const panel = new THREE.Mesh(panelGeometry, antennaMaterial);
-            panel.castShadow = true;
-            panel.receiveShadow = true;
             antennaGroup.add(panel);
             
             // Equipment box
             const boxGeometry = new THREE.BoxGeometry(0.8, 1.5, 1);
             const box = new THREE.Mesh(boxGeometry, equipmentMaterial);
             box.position.set(-0.7, -0.5, 0);
-            box.castShadow = true;
-            box.receiveShadow = true;
             antennaGroup.add(box);
             
             parent.add(antennaGroup);
@@ -307,8 +273,6 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
             const armGeometry = new THREE.BoxGeometry(3, 0.3, 0.3);
             const arm = new THREE.Mesh(armGeometry, darkMetalMaterial);
             arm.position.x = 1.5;
-            arm.castShadow = true;
-            arm.receiveShadow = true;
             dishGroup.add(arm);
             
             // Dish
@@ -317,8 +281,6 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
             dish.rotation.y = Math.PI;
             dish.rotation.x = Math.PI / 2;
             dish.position.set(3, 0, 0);
-            dish.castShadow = true;
-            dish.receiveShadow = true;
             dishGroup.add(dish);
             
             // Mount
@@ -326,8 +288,6 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
             const mount = new THREE.Mesh(mountGeometry, darkMetalMaterial);
             mount.rotation.x = Math.PI / 2;
             mount.position.set(3, 0, 0);
-            mount.castShadow = true;
-            mount.receiveShadow = true;
             dishGroup.add(mount);
             
             // Rotate the whole dish assembly
