@@ -14,7 +14,7 @@ import ValveActuator from "../components/valve-actuator";
 import VehicleIotGateway from "../components/vehicle-iot-gateway";
 import { useEffect, useState, Suspense } from "react";
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
+import { OrbitControls, Environment } from '@react-three/drei'; // Make sure drei is installed
 
 export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -35,7 +35,7 @@ export default function Home() {
   // Define approximate positions for each model in the scene
   const modelPositions: [number, number, number][] = [
     [0, 0, 0],    // 5G Tower (center)
-    [15, 0, 15],   // Air Quality Sensor (Increased spacing)
+    [15, 0, 15],   // Air Quality Sensor
     [-15, 0, 15],  // Blade Server
     [30, 0, 0],    // Env Sensor
     [-30, 0, 0],   // Laptop
@@ -43,9 +43,25 @@ export default function Home() {
     [-15, 0, -15], // Motor Actuator
     [0, 0, 30],    // Residential IoT Gateway
     [0, 0, -30],   // Smartphone
-    [25, 0, -25],  // Tablet (Adjusted)
-    [-25, 0, -25], // Valve Actuator (Adjusted)
-    [0, 0, -45],   // Vehicle IoT Gateway (Adjusted)
+    [25, 0, -25],  // Tablet
+    [-25, 0, -25], // Valve Actuator
+    [0, 0, -45],   // Vehicle IoT Gateway
+  ];
+
+  // Array of model components
+  const ModelComponents = [
+    FivegTower,
+    AirQualitySensor,
+    BladeServer,
+    EnvSensor,
+    Laptop,
+    MotionSensor,
+    MotorActuator,
+    ResidentialIotGateway,
+    SmartPhone,
+    Tablet,
+    ValveActuator,
+    VehicleIotGateway,
   ];
 
   return (
@@ -54,10 +70,10 @@ export default function Home() {
         3D IoT Network Visualization
       </h1>
       <div className="flex-grow relative">
-        {/* Adjusted camera position - further back */}
+        {/* Use React Three Fiber Canvas */}
         <Canvas shadows camera={{ position: [0, 15, 60], fov: 50 }}>
           <Suspense fallback={null}>
-            {/* Add manual lighting */}
+            {/* R3F Lighting */}
             <ambientLight intensity={isDarkMode ? 0.3 : 0.6} />
             <directionalLight
               position={[10, 10, 5]}
@@ -68,49 +84,18 @@ export default function Home() {
             />
             <directionalLight position={[-10, 10, -5]} intensity={0.5} />
 
-            {/* Position each model using groups, removed scale prop */}
-            <group position={modelPositions[0]}>
-              <FivegTower isDarkMode={isDarkMode} />
-            </group>
-            <group position={modelPositions[1]}>
-              <AirQualitySensor isDarkMode={isDarkMode} />
-            </group>
-            <group position={modelPositions[2]}>
-              <BladeServer isDarkMode={isDarkMode} />
-            </group>
-            <group position={modelPositions[3]}>
-              <EnvSensor isDarkMode={isDarkMode} />
-            </group>
-            <group position={modelPositions[4]}>
-              <Laptop isDarkMode={isDarkMode} />
-            </group>
-            <group position={modelPositions[5]}>
-              <MotionSensor isDarkMode={isDarkMode} />
-            </group>
-            <group position={modelPositions[6]}>
-              <MotorActuator isDarkMode={isDarkMode} />
-            </group>
-            <group position={modelPositions[7]}>
-              <ResidentialIotGateway isDarkMode={isDarkMode} />
-            </group>
-            <group position={modelPositions[8]}>
-              <SmartPhone isDarkMode={isDarkMode} />
-            </group>
-            <group position={modelPositions[9]}>
-              <Tablet isDarkMode={isDarkMode} />
-            </group>
-            <group position={modelPositions[10]}>
-              <ValveActuator isDarkMode={isDarkMode} />
-            </group>
-            <group position={modelPositions[11]}>
-              <VehicleIotGateway isDarkMode={isDarkMode} />
-            </group>
+            {/* Map over components and positions */}
+            {ModelComponents.map((ModelComponent, index) => (
+              <group key={index} position={modelPositions[index]}>
+                <ModelComponent isDarkMode={isDarkMode} />
+              </group>
+            ))}
 
             {/* Optional: Add environment for reflections */}
             <Environment preset={isDarkMode ? "night" : "city"} background={false} />
 
           </Suspense>
-          {/* Add OrbitControls for interaction */}
+          {/* R3F OrbitControls */}
           <OrbitControls makeDefault autoRotate autoRotateSpeed={0.5} />
         </Canvas>
       </div>
