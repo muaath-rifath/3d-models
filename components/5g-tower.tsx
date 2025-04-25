@@ -13,6 +13,11 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
     const mountRef = useRef<HTMLDivElement>(null);
     const sceneRef = useRef<THREE.Scene | null>(null);
     const towerRef = useRef<THREE.Group | null>(null);
+    // Add refs for renderer, camera, controls, and animation frame
+    const rendererRef = useRef<THREE.WebGLRenderer | null>(null);
+    const cameraRef = useRef<THREE.PerspectiveCamera | null>(null);
+    const controlsRef = useRef<OrbitControls | null>(null);
+    const requestRef = useRef<number | null>(null);
 
     // Function to update materials based on dark mode
     const updateMaterials = (isDark: boolean) => {
@@ -60,6 +65,8 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
     useEffect(() => {
         if (!mountRef.current) return;
 
+        const currentMount = mountRef.current; // Capture mount point
+
         // Scene setup
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(isDarkMode ? 0x001208 : 0xf0f0f0);
@@ -67,19 +74,20 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
 
         // Camera setup
         const camera = new THREE.PerspectiveCamera(
-            50, 
+            50,
             width / height,
             0.1,
             1000
         );
         camera.position.set(20, 15, 20);
+        cameraRef.current = camera; // Store camera in ref
 
         // Renderer setup
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(width, height);
-        // Disable shadows
-        renderer.shadowMap.enabled = false; 
-        mountRef.current.appendChild(renderer.domElement);
+        renderer.shadowMap.enabled = false;
+        rendererRef.current = renderer; // Store renderer in ref
+        currentMount.appendChild(renderer.domElement);
 
         // Controls setup
         const controls = new OrbitControls(camera, renderer.domElement);
@@ -87,6 +95,7 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
         controls.dampingFactor = 0.05;
         controls.minDistance = 10;
         controls.maxDistance = 50;
+        controlsRef.current = controls; // Store controls in ref
 
         // Create lighting
         const ambientLight = new THREE.AmbientLight(
@@ -298,47 +307,99 @@ export default function Tower5G({ isDarkMode = false, width = 500, height = 400 
 
         // Animation loop
         const animate = () => {
-            requestAnimationFrame(animate);
-            controls.update();
-            renderer.render(scene, camera);
+            // Use refs and check for existence
+            if (rendererRef.current && sceneRef.current && cameraRef.current && controlsRef.current) {
+                controlsRef.current.update();
+                rendererRef.current.render(sceneRef.current, cameraRef.current);
+            }
+            requestRef.current = requestAnimationFrame(animate); // Store request ID
         };
-        animate();
+        // Start animation loop only once refs are likely set
+        requestRef.current = requestAnimationFrame(animate);
 
         // Handle window resize
         const handleResize = () => {
-            camera.aspect = width / height;
-            camera.updateProjectionMatrix();
-            renderer.setSize(width, height);
+            // Use refs and check for existence
+            if (cameraRef.current && rendererRef.current) {
+                cameraRef.current.aspect = width / height;
+                cameraRef.current.updateProjectionMatrix();
+                rendererRef.current.setSize(width, height);
+            }
         };
 
-        window.addEventListener('resize', handleResize);
+        // Initial call to handle potential initial size mismatch
+        handleResize(); 
+        // Note: Resize listener might be better outside useEffect or handled differently if width/height props change frequently
 
         // Cleanup function
         return () => {
-            window.removeEventListener('resize', handleResize);
-            if (mountRef.current) {
-                mountRef.current.removeChild(renderer.domElement);
+            // Cancel the animation frame
+            if (requestRef.current) {
+                cancelAnimationFrame(requestRef.current);
             }
-            
-            scene.traverse((object) => {
-                if (object instanceof THREE.Mesh) {
-                    if (object.geometry) {
-                        object.geometry.dispose();
-                    }
-                    
-                    if (Array.isArray(object.material)) {
-                        object.material.forEach(material => material.dispose());
-                    } else if (object.material) {
-                        object.material.dispose();
+
+            // Dispose controls
+            if (controlsRef.current) {
+                controlsRef.current.dispose();
+                controlsRef.current = null;
+            }
+
+            // Dispose renderer and remove from DOM
+            if (rendererRef.current) {
+                rendererRef.current.dispose();
+                if (currentMount && rendererRef.current.domElement) {
+                    try {
+                        currentMount.removeChild(rendererRef.current.domElement);
+                    } catch (e) {
+                        console.warn("Could not remove renderer DOM element during cleanup:", e);
                     }
                 }
-            });
+                rendererRef.current = null;
+            }
+
+            // Dispose scene resources
+            if (sceneRef.current) {
+                sceneRef.current.traverse((object) => {
+                    if (object instanceof THREE.Mesh) {
+                        if (object.geometry) {
+                            object.geometry.dispose();
+                        }
+                        const material = object.material as THREE.Material | THREE.Material[];
+                        if (Array.isArray(material)) {
+                            material.forEach(mat => mat.dispose());
+                        } else if (material) {
+                            material.dispose();
+                        }
+                    }
+                });
+                sceneRef.current = null; // Clear scene ref
+            }
+
+            // Clear other refs
+            cameraRef.current = null;
+            towerRef.current = null;
         };
-    }, [isDarkMode, width, height]);
+    }, [isDarkMode, width, height]); // Keep dependencies
 
     // Apply dark mode updates when the prop changes
     useEffect(() => {
         updateMaterials(isDarkMode);
+        // Update lights based on dark mode as well
+        if (sceneRef.current) {
+            sceneRef.current.traverse((object) => {
+                if (object instanceof THREE.AmbientLight) {
+                    object.color.set(isDarkMode ? 0x223322 : 0x909090);
+                    object.intensity = isDarkMode ? 0.4 : 0.8;
+                } else if (object instanceof THREE.DirectionalLight) {
+                    object.color.set(isDarkMode ? 0xaaffcc : 0xffffff);
+                    object.intensity = isDarkMode ? 0.7 : 0.9;
+                } else if (object instanceof THREE.PointLight && object.parent?.name === 'warning') {
+                    // Assuming warning light material name implies it's the one with point light
+                    object.color.set(isDarkMode ? 0xff7700 : 0xff3300);
+                    object.intensity = isDarkMode ? 1.2 : 1; // Adjust intensity if needed
+                }
+            });
+        }
     }, [isDarkMode]);
 
     return (

@@ -14,6 +14,7 @@ export default function MotorActuator({ isDarkMode = false, width = 500, height 
   const sceneRef = useRef<THREE.Scene | null>(null);
   const motorRef = useRef<THREE.Group | null>(null);
   const ledRef = useRef<THREE.Mesh | null>(null);
+  const animationFrameId = useRef<number | null>(null); // Add ref for animation frame ID
 
   // Wrap createMotor in useCallback to maintain stable function reference
   const createMotor = useCallback((isDark: boolean) => {
@@ -204,32 +205,32 @@ export default function MotorActuator({ isDarkMode = false, width = 500, height 
   // Setup the scene once on mount
   useEffect(() => {
     if (!containerRef.current) return;
-    
+
     // Scene setup
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(isDarkMode ? 0x081208 : 0xf0f4f0);
     sceneRef.current = scene;
-    
+
     // Camera setup
     const camera = new THREE.PerspectiveCamera(
-      45, 
-      width / height, 
-      0.1, 
+      45,
+      width / height,
+      0.1,
       1000
     );
     camera.position.set(0, 15, 30);
-    
+
     // Renderer setup
     const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(width, height);
     renderer.shadowMap.enabled = false; // Disable shadows
     containerRef.current.appendChild(renderer.domElement);
-    
+
     // Controls setup
     const controls = new OrbitControls(camera, renderer.domElement);
     controls.enableDamping = true;
     controls.dampingFactor = 0.05;
-    
+
     // Add lighting
     const ambientLight = new THREE.AmbientLight(
       isDarkMode ? 0x445544 : 0x909090,
@@ -273,13 +274,14 @@ export default function MotorActuator({ isDarkMode = false, width = 500, height 
     // Start animation loop
     let lastTime = 0;
     const rotationSpeed = 0.4; // Radians per second
-    
+
     const animate = (time: number) => {
+      // Store the frame ID so we can cancel it
+      animationFrameId.current = requestAnimationFrame(animate);
+
       const delta = time - lastTime;
       lastTime = time;
-      
-      requestAnimationFrame(animate);
-      
+
       // Rotate the motor shaft
       if (motorRef.current) {
         // Get the shaft (6th child - index 5)
@@ -288,13 +290,17 @@ export default function MotorActuator({ isDarkMode = false, width = 500, height 
           shaft.rotation.x += rotationSpeed * (delta / 1000);
         }
       }
-      
+
       controls.update();
-      renderer.render(scene, camera);
+      // Ensure scene and camera are available before rendering
+      if (scene && camera) {
+        renderer.render(scene, camera);
+      }
     };
-    
+
+    // Start the animation loop
     animate(0);
-    
+
     // Handle window resize
     const handleResize = () => {
       camera.aspect = width / height;
@@ -306,12 +312,17 @@ export default function MotorActuator({ isDarkMode = false, width = 500, height 
     
     // Cleanup on unmount
     return () => {
+      // Cancel the animation frame loop
+      if (animationFrameId.current !== null) {
+        cancelAnimationFrame(animationFrameId.current);
+      }
+
       window.removeEventListener('resize', handleResize);
-      
+
       if (containerRef.current?.contains(renderer.domElement)) {
         containerRef.current.removeChild(renderer.domElement);
       }
-      
+
       // Dispose of resources
       scene.traverse((object) => {
         if (object instanceof THREE.Mesh) {
