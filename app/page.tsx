@@ -1,103 +1,119 @@
-import Image from "next/image";
+"use client";
+
+import FivegTower from "../components/5g-tower";
+import AirQualitySensor from "../components/air-quality-sensor";
+import BladeServer from "../components/blade-server";
+import EnvSensor from "../components/env-sensor";
+import Laptop from "../components/laptop";
+import MotionSensor from "../components/motion-sensor";
+import MotorActuator from "../components/motor-actuator";
+import ResidentialIotGateway from "../components/residential-iot-gateway";
+import SmartPhone from "../components/smart-phone";
+import Tablet from "../components/tablet";
+import ValveActuator from "../components/valve-actuator";
+import VehicleIotGateway from "../components/vehicle-iot-gateway";
+import { useEffect, useState, Suspense } from "react";
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls, Environment } from '@react-three/drei';
 
 export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm/6 text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-[family-name:var(--font-geist-mono)] font-semibold">
-              app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [isDarkMode, setIsDarkMode] = useState(false);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
+  useEffect(() => {
+    // Check if user prefers dark mode
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    setIsDarkMode(prefersDark);
+
+    // Listen for changes in color scheme preference
+    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    const handleChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
+    mediaQuery.addEventListener("change", handleChange);
+
+    return () => mediaQuery.removeEventListener("change", handleChange);
+  }, []);
+
+  // Define approximate positions for each model in the scene
+  const modelPositions: [number, number, number][] = [
+    [0, 0, 0],    // 5G Tower (center)
+    [15, 0, 15],   // Air Quality Sensor (Increased spacing)
+    [-15, 0, 15],  // Blade Server
+    [30, 0, 0],    // Env Sensor
+    [-30, 0, 0],   // Laptop
+    [15, 0, -15],  // Motion Sensor
+    [-15, 0, -15], // Motor Actuator
+    [0, 0, 30],    // Residential IoT Gateway
+    [0, 0, -30],   // Smartphone
+    [25, 0, -25],  // Tablet (Adjusted)
+    [-25, 0, -25], // Valve Actuator (Adjusted)
+    [0, 0, -45],   // Vehicle IoT Gateway (Adjusted)
+  ];
+
+  return (
+    <div className="h-screen w-screen p-6 bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <h1 className="text-3xl font-bold mb-4 text-center text-gray-800 dark:text-gray-100">
+        3D IoT Network Visualization
+      </h1>
+      <div className="flex-grow relative">
+        {/* Adjusted camera position - further back */}
+        <Canvas shadows camera={{ position: [0, 15, 60], fov: 50 }}>
+          <Suspense fallback={null}>
+            {/* Add manual lighting */}
+            <ambientLight intensity={isDarkMode ? 0.3 : 0.6} />
+            <directionalLight
+              position={[10, 10, 5]}
+              intensity={1}
+              castShadow
+              shadow-mapSize-width={2048}
+              shadow-mapSize-height={2048}
             />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
-        </div>
-      </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
+            <directionalLight position={[-10, 10, -5]} intensity={0.5} />
+
+            {/* Position each model using groups, removed scale prop */}
+            <group position={modelPositions[0]}>
+              <FivegTower isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[1]}>
+              <AirQualitySensor isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[2]}>
+              <BladeServer isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[3]}>
+              <EnvSensor isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[4]}>
+              <Laptop isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[5]}>
+              <MotionSensor isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[6]}>
+              <MotorActuator isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[7]}>
+              <ResidentialIotGateway isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[8]}>
+              <SmartPhone isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[9]}>
+              <Tablet isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[10]}>
+              <ValveActuator isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[11]}>
+              <VehicleIotGateway isDarkMode={isDarkMode} />
+            </group>
+
+            {/* Optional: Add environment for reflections */}
+            <Environment preset={isDarkMode ? "night" : "city"} background={false} />
+
+          </Suspense>
+          {/* Add OrbitControls for interaction */}
+          <OrbitControls makeDefault autoRotate autoRotateSpeed={0.5} />
+        </Canvas>
+      </div>
     </div>
   );
 }
