@@ -1,346 +1,212 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { useFrame } from '@react-three/fiber'; // Import if animations are needed
+
+// Removed OrbitControls, useEffect, and imperative setup refs
 
 type BladeServerProps = {
   isDarkMode?: boolean;
-  width?: number;
-  height?: number;
+  // Removed width and height props
 }
 
-export default function BladeServer({ isDarkMode = false, width = 500, height = 400 }: BladeServerProps) {
-    const mountRef = useRef<HTMLDivElement>(null);
-    const serverRef = useRef<THREE.Group | null>(null);
-    const sceneRef = useRef<THREE.Scene | null>(null);
-    const animationFrameId = useRef<number | null>(null); // Ref to store animation frame ID
+// Material hook
+const useBladeServerMaterials = (isDarkMode: boolean) => {
+  return useMemo(() => ({
+    rackMaterial: new THREE.MeshStandardMaterial({
+        color: isDarkMode ? 0x223322 : 0x444444,
+        roughness: 0.7,
+        metalness: 0.8,
+        name: 'rack'
+    }),
+    serverMaterial: new THREE.MeshStandardMaterial({
+        color: isDarkMode ? 0x003322 : 0x333333,
+        roughness: 0.6,
+        metalness: 0.9,
+        name: 'server'
+    }),
+    frontPanelMaterial: new THREE.MeshStandardMaterial({
+        color: isDarkMode ? 0x009977 : 0x555555,
+        roughness: 0.5,
+        metalness: 0.7,
+        name: 'front_panel'
+    }),
+    ledMaterial: new THREE.MeshStandardMaterial({
+        color: 0x00ff88,
+        emissive: 0x00ff88,
+        emissiveIntensity: 0.8,
+        roughness: 0.2,
+        metalness: 0.9,
+        name: 'led'
+    }),
+    activityLEDMaterial: new THREE.MeshStandardMaterial({
+        color: 0x00ffdd,
+        emissive: 0x00ffdd,
+        emissiveIntensity: 0.8, // Will be animated
+        roughness: 0.2,
+        metalness: 0.9,
+        name: 'led_activity'
+    }),
+    portMaterial: new THREE.MeshStandardMaterial({
+        color: isDarkMode ? 0x006655 : 0xaaaaaa,
+        roughness: 0.6,
+        metalness: 0.8,
+        name: 'port'
+    }),
+    handleMaterial: new THREE.MeshStandardMaterial({
+        color: isDarkMode ? 0x77ccbb : 0x888888,
+        roughness: 0.3,
+        metalness: 0.9,
+        name: 'handle'
+    }),
+    ventMaterial: new THREE.MeshStandardMaterial({
+        color: isDarkMode ? 0x112211 : 0x222222,
+        roughness: 0.9,
+        metalness: 0.2,
+        name: 'vent'
+    }),
+    railMaterial: new THREE.MeshStandardMaterial({
+        color: isDarkMode ? 0x444444 : 0x777777,
+        roughness: 0.4,
+        metalness: 0.8,
+        name: 'rail'
+    }),
+  }), [isDarkMode]);
+};
 
-    useEffect(() => {
-        if (!mountRef.current) return;
+// Helper component for a single server blade
+function ServerBlade({ yPos, rackWidth, rackDepth, serverHeight, materials }: {
+  yPos: number;
+  rackWidth: number;
+  rackDepth: number;
+  serverHeight: number;
+  materials: ReturnType<typeof useBladeServerMaterials>;
+}) {
+  const activityLedRef = useRef<THREE.MeshStandardMaterial>(null);
 
-        const currentMount = mountRef.current;
+  // Animate activity LED
+  useFrame(({ clock }) => {
+    if (activityLedRef.current) {
+      activityLedRef.current.emissiveIntensity = Math.sin(clock.elapsedTime * 5 + yPos) * 0.4 + 0.6; // Blinking effect
+    }
+  });
 
-        // Create scene
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(isDarkMode ? 0x081208 : 0xf0f4f0);
-        sceneRef.current = scene;
+  return (
+    <group position-y={yPos}>
+      {/* Server blade body */}
+      <mesh material={materials.serverMaterial} position-z={0} castShadow receiveShadow>
+        <boxGeometry args={[rackWidth - 1, serverHeight, rackDepth - 0.5]} />
+      </mesh>
 
-        // Create camera
-        const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-        camera.position.set(0, 0, 50);
+      {/* Front panel */}
+      <mesh material={materials.frontPanelMaterial} position-z={rackDepth / 2 - 0.1} castShadow>
+        <boxGeometry args={[rackWidth - 1, serverHeight, 0.2]} />
+      </mesh>
 
-        // Create renderer
-        const renderer = new THREE.WebGLRenderer({
-            antialias: true,
-            alpha: true,
-            powerPreference: "high-performance"
-        });
-        renderer.setSize(width, height);
-        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+      {/* Power LED */}
+      <mesh material={materials.ledMaterial} position={[-rackWidth / 2 + 1, 0, rackDepth / 2 + 0.01]}>
+        <circleGeometry args={[0.1, 16]} />
+      </mesh>
 
-        // Fix for compatibility with different Three.js versions
-        try {
-            // For newer versions
-            if ('outputColorSpace' in renderer) {
-                (renderer as any).outputColorSpace = THREE.SRGBColorSpace;
-            } 
-            // For older versions
-            else if ('outputEncoding' in renderer) {
-                (renderer as any).outputEncoding = THREE.SRGBColorSpace;
-            }
-        } catch (e) {
-            console.warn("Could not set renderer color space", e);
-        }
+      {/* Activity LED */}
+      <mesh position={[-rackWidth / 2 + 1.5, 0, rackDepth / 2 + 0.01]}>
+        <circleGeometry args={[0.1, 16]} />
+        {/* Clone material and assign ref for animation */}
+        <meshStandardMaterial ref={activityLedRef} {...materials.activityLEDMaterial} />
+      </mesh>
 
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.2;
-        currentMount.appendChild(renderer.domElement);
+      {/* Network ports */}
+      {[0, 1].map(p => (
+        <mesh key={p} material={materials.portMaterial} position={[rackWidth / 2 - 2 - p * 1.2, 0, rackDepth / 2 + 0.01]}>
+          <boxGeometry args={[0.8, 0.4, 0.1]} />
+        </mesh>
+      ))}
 
-        // Add orbit controls
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.minDistance = 20;
-        controls.maxDistance = 100;
+      {/* Handles */}
+      <mesh material={materials.handleMaterial} position={[-rackWidth / 2 + 0.6, 0, rackDepth / 2 - 0.1]} rotation-z={Math.PI / 2}>
+        <cylinderGeometry args={[0.2, 0.2, 0.8, 8]} />
+      </mesh>
+      <mesh material={materials.handleMaterial} position={[rackWidth / 2 - 0.6, 0, rackDepth / 2 - 0.1]} rotation-z={Math.PI / 2}>
+        <cylinderGeometry args={[0.2, 0.2, 0.8, 8]} />
+      </mesh>
+    </group>
+  );
+}
 
-        // Lighting setup
-        const ambientLight = new THREE.AmbientLight(
-          isDarkMode ? 0x445544 : 0x909090,
-          isDarkMode ? 0.4 : 0.8
+// Main component
+export default function BladeServer({ isDarkMode = false }: BladeServerProps) {
+    const serverGroupRef = useRef<THREE.Group>(null);
+    const materials = useBladeServerMaterials(isDarkMode);
+
+    // Rack dimensions
+    const rackWidth = 30;
+    const rackHeight = 20;
+    const rackDepth = 8;
+    const serverCount = 8;
+    const serverHeight = 1.8;
+    const serverSpacing = 0.2;
+
+    // Calculate server positions
+    const serverPositions = useMemo(() => {
+        return Array.from({ length: serverCount }).map((_, i) =>
+            (rackHeight / 2) - 2 - i * (serverHeight + serverSpacing)
         );
-        scene.add(ambientLight);
+    }, [rackHeight, serverCount, serverHeight, serverSpacing]);
 
-        const mainLight = new THREE.DirectionalLight(
-          isDarkMode ? 0xaaffcc : 0xffffff,
-          isDarkMode ? 0.7 : 0.9
-        );
-        mainLight.position.set(10, 10, 10);
-        mainLight.castShadow = true;
-        mainLight.shadow.mapSize.width = 1024;
-        mainLight.shadow.mapSize.height = 1024;
-        scene.add(mainLight);
-
-        // Add subtle rim light to highlight edges
-        const rimLight = new THREE.DirectionalLight(
-          isDarkMode ? 0x00ffaa : 0xccffff,
-          isDarkMode ? 0.3 : 0.2
-        );
-        rimLight.position.set(-10, 5, -10);
-        scene.add(rimLight);
-
-        // Create blade server rack
-        const serverGroup = new THREE.Group();
-
-        // Rack dimensions and materials
-        const rackWidth = 30;
-        const rackHeight = 20;
-        const rackDepth = 8;
-
-        // Materials
-        const rackMaterial = new THREE.MeshStandardMaterial({
-            color: isDarkMode ? 0x223322 : 0x444444,
-            roughness: 0.7,
-            metalness: 0.8,
-            name: 'rack'
-        });
-
-        const serverMaterial = new THREE.MeshStandardMaterial({
-            color: isDarkMode ? 0x003322 : 0x333333,
-            roughness: 0.6,
-            metalness: 0.9,
-            name: 'server'
-        });
-
-        const frontPanelMaterial = new THREE.MeshStandardMaterial({
-            color: isDarkMode ? 0x009977 : 0x555555,
-            roughness: 0.5,
-            metalness: 0.7,
-            name: 'front_panel'
-        });
-
-        const ledMaterial = new THREE.MeshStandardMaterial({
-            color: 0x00ff88,
-            emissive: 0x00ff88,
-            emissiveIntensity: 0.8,
-            roughness: 0.2,
-            metalness: 0.9,
-            name: 'led'
-        });
-
-        // Create rack casing
-        const rackGeometry = new THREE.BoxGeometry(rackWidth, rackHeight, rackDepth);
-        const rack = new THREE.Mesh(rackGeometry, rackMaterial);
-        rack.castShadow = true;
-        rack.receiveShadow = true;
-        serverGroup.add(rack);
-
-        // Create individual blade servers
-        const serverCount = 8;
-        const serverHeight = 1.8;
-        const serverSpacing = 0.2;
-
-        for (let i = 0; i < serverCount; i++) {
-            const y = (rackHeight / 2) - 2 - i * (serverHeight + serverSpacing);
-
-            // Server blade
-            const bladeGeometry = new THREE.BoxGeometry(rackWidth - 1, serverHeight, rackDepth - 0.5);
-            const blade = new THREE.Mesh(bladeGeometry, serverMaterial);
-            blade.position.set(0, y, 0);
-            blade.castShadow = true;
-            blade.receiveShadow = true;
-
-            // Front panel with details
-            const frontPanelGeometry = new THREE.BoxGeometry(rackWidth - 1, serverHeight, 0.2);
-            const frontPanel = new THREE.Mesh(frontPanelGeometry, frontPanelMaterial);
-            frontPanel.position.set(0, y, rackDepth / 2 - 0.1);
-            frontPanel.castShadow = true;
-
-            // Add LED indicators
-            const ledGeometry = new THREE.CircleGeometry(0.1, 16);
-
-            // Power LED
-            const powerLED = new THREE.Mesh(ledGeometry, ledMaterial);
-            powerLED.position.set(-rackWidth / 2 + 1, y, rackDepth / 2 + 0.01);
-            powerLED.rotation.set(0, 0, 0);
-            serverGroup.add(powerLED);
-
-            // Activity LED - different color
-            const activityLEDMaterial = ledMaterial.clone();
-            activityLEDMaterial.color.set(0x00ffdd);
-            activityLEDMaterial.emissive.set(0x00ffdd);
-
-            const activityLED = new THREE.Mesh(ledGeometry, activityLEDMaterial);
-            activityLED.position.set(-rackWidth / 2 + 1.5, y, rackDepth / 2 + 0.01);
-            serverGroup.add(activityLED);
-
-            // Network ports
-            for (let p = 0; p < 2; p++) {
-                const portGeometry = new THREE.BoxGeometry(0.8, 0.4, 0.1);
-                const portMaterial = new THREE.MeshStandardMaterial({
-                    color: isDarkMode ? 0x006655 : 0xaaaaaa,
-                    roughness: 0.6,
-                    metalness: 0.8,
-                    name: 'port'
-                });
-                const port = new THREE.Mesh(portGeometry, portMaterial);
-                port.position.set(rackWidth / 2 - 2 - p * 1.2, y, rackDepth / 2 + 0.01);
-                serverGroup.add(port);
-            }
-
-            // Server handles
-            const handleGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.8, 8);
-            const handleMaterial = new THREE.MeshStandardMaterial({
-                color: isDarkMode ? 0x77ccbb : 0x888888,
-                roughness: 0.3,
-                metalness: 0.9,
-                name: 'handle'
-            });
-
-            // Left handle
-            const leftHandle = new THREE.Mesh(handleGeometry, handleMaterial);
-            leftHandle.rotation.set(0, 0, Math.PI / 2);
-            leftHandle.position.set(-rackWidth / 2 + 0.6, y, rackDepth / 2 - 0.1);
-            serverGroup.add(leftHandle);
-
-            // Right handle
-            const rightHandle = new THREE.Mesh(handleGeometry, handleMaterial);
-            rightHandle.rotation.set(0, 0, Math.PI / 2);
-            rightHandle.position.set(rackWidth / 2 - 0.6, y, rackDepth / 2 - 0.1);
-            serverGroup.add(rightHandle);
-
-            serverGroup.add(blade);
-            serverGroup.add(frontPanel);
-        }
-
-        // Add ventilation grilles to the sides
-        const ventDensity = 10;
-        const ventSize = 0.3;
-
-        for (let vx = -4; vx <= 4; vx++) {
-            for (let vy = -4; vy <= 4; vy++) {
-                // Skip some vents for variation
-                if ((vx + vy) % 3 === 0) continue;
-
-                // Create vent holes on sides
-                const ventGeometry = new THREE.CircleGeometry(ventSize, 8);
-                const ventMaterial = new THREE.MeshStandardMaterial({
-                    color: isDarkMode ? 0x112211 : 0x222222,
-                    roughness: 0.9,
-                    metalness: 0.2
-                });
-
-                // Left side vents
-                const leftVent = new THREE.Mesh(ventGeometry, ventMaterial);
-                leftVent.position.set(-rackWidth / 2 - 0.01, vx * 2, vy * 1.5);
-                leftVent.rotation.set(0, Math.PI / 2, 0);
-                serverGroup.add(leftVent);
-
-                // Right side vents
-                const rightVent = new THREE.Mesh(ventGeometry, ventMaterial);
-                rightVent.position.set(rackWidth / 2 + 0.01, vx * 2, vy * 1.5);
-                rightVent.rotation.set(0, -Math.PI / 2, 0);
-                serverGroup.add(rightVent);
+    // Calculate vent positions
+    const ventPositions = useMemo(() => {
+        const positions: { x: number; y: number; z: number; side: 'left' | 'right' }[] = [];
+        const ventDensity = 4; // Reduced density
+        for (let vx = -ventDensity; vx <= ventDensity; vx++) {
+            for (let vy = -ventDensity; vy <= ventDensity; vy++) {
+                if ((vx + vy) % 3 === 0) continue; // Skip some
+                positions.push({ x: -rackWidth / 2 - 0.01, y: vx * 2, z: vy * 1.5, side: 'left' });
+                positions.push({ x: rackWidth / 2 + 0.01, y: vx * 2, z: vy * 1.5, side: 'right' });
             }
         }
-
-        // Add rack mounting rails
-        const railGeometry = new THREE.BoxGeometry(rackWidth + 2, 0.5, 0.5);
-        const railMaterial = new THREE.MeshStandardMaterial({
-            color: isDarkMode ? 0x444444 : 0x777777,
-            roughness: 0.4,
-            metalness: 0.8
-        });
-
-        // Top rail
-        const topRail = new THREE.Mesh(railGeometry, railMaterial);
-        topRail.position.set(0, rackHeight / 2 + 0.25, 0);
-        serverGroup.add(topRail);
-
-        // Bottom rail
-        const bottomRail = new THREE.Mesh(railGeometry, railMaterial);
-        bottomRail.position.set(0, -rackHeight / 2 - 0.25, 0);
-        serverGroup.add(bottomRail);
-
-        serverGroup.position.set(0, 0, 0);
-        scene.add(serverGroup);
-        serverRef.current = serverGroup;
-
-        // Animation loop with smooth animations
-        const animate = () => {
-            // Store the frame ID before requesting the next frame
-            animationFrameId.current = requestAnimationFrame(animate);
-
-            // Safety check: ensure resources are still valid before rendering
-            if (!renderer || !sceneRef.current || !camera) {
-                console.warn("Skipping frame: Resources not available.");
-                return;
-            }
-
-            controls.update();
-            // Use sceneRef.current which might be nullified during cleanup
-            renderer.render(sceneRef.current, camera);
-        };
-
-        animate(); // Start the animation loop
-
-        // Handle window resize
-        const handleResize = () => {
-            // Check if camera and renderer still exist
-            if (camera && renderer) {
-                camera.aspect = width / height;
-                camera.updateProjectionMatrix();
-                renderer.setSize(width, height);
-            }
-        };
-
-        window.addEventListener('resize', handleResize);
-
-        // Cleanup function
-        return () => {
-            // Cancel the animation frame to stop the loop
-            if (animationFrameId.current) {
-                cancelAnimationFrame(animationFrameId.current);
-                animationFrameId.current = null;
-            }
-
-            window.removeEventListener('resize', handleResize);
-
-            // Safely remove the renderer's canvas
-            if (renderer && renderer.domElement && currentMount.contains(renderer.domElement)) {
-                currentMount.removeChild(renderer.domElement);
-            }
-
-            // Properly dispose of materials and geometries
-            if (sceneRef.current) {
-                sceneRef.current.traverse((object) => {
-                    if (object instanceof THREE.Mesh) {
-                        if (object.geometry) {
-                            object.geometry.dispose();
-                        }
-
-                        if (Array.isArray(object.material)) {
-                            object.material.forEach(material => material.dispose());
-                        } else if (object.material) {
-                            object.material.dispose();
-                        }
-                    }
-                });
-            }
-
-            // Dispose of the renderer itself
-            if (renderer) {
-                renderer.dispose();
-            }
-
-            // Clear refs to allow garbage collection
-            sceneRef.current = null;
-            serverRef.current = null;
-        };
-    }, [isDarkMode, width, height]); // Dependencies remain the same
+        return positions;
+    }, [rackWidth]);
 
     return (
-        <div ref={mountRef} style={{ width, height }} />
+        <group ref={serverGroupRef} dispose={null}>
+            {/* Rack casing */}
+            <mesh material={materials.rackMaterial} castShadow receiveShadow>
+                <boxGeometry args={[rackWidth, rackHeight, rackDepth]} />
+            </mesh>
+
+            {/* Individual blade servers */}
+            {serverPositions.map((yPos, i) => (
+                <ServerBlade
+                    key={i}
+                    yPos={yPos}
+                    rackWidth={rackWidth}
+                    rackDepth={rackDepth}
+                    serverHeight={serverHeight}
+                    materials={materials}
+                />
+            ))}
+
+            {/* Ventilation grilles */}
+            {ventPositions.map((pos, i) => (
+                <mesh
+                    key={i}
+                    material={materials.ventMaterial}
+                    position={[pos.x, pos.y, pos.z]}
+                    rotation-y={pos.side === 'left' ? Math.PI / 2 : -Math.PI / 2}
+                >
+                    <circleGeometry args={[0.3, 8]} />
+                </mesh>
+            ))}
+
+            {/* Rack mounting rails */}
+            <mesh material={materials.railMaterial} position-y={rackHeight / 2 + 0.25}>
+                <boxGeometry args={[rackWidth + 2, 0.5, 0.5]} />
+            </mesh>
+            <mesh material={materials.railMaterial} position-y={-rackHeight / 2 - 0.25}>
+                <boxGeometry args={[rackWidth + 2, 0.5, 0.5]} />
+            </mesh>
+        </group>
     );
 }
+
+// Removed imperative setup, animation loop, resize handler, and cleanup logic

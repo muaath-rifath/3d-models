@@ -12,113 +12,107 @@ import SmartPhone from "../components/smart-phone";
 import Tablet from "../components/tablet";
 import ValveActuator from "../components/valve-actuator";
 import VehicleIotGateway from "../components/vehicle-iot-gateway";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
+import { Canvas } from '@react-three/fiber';
+import { OrbitControls, Environment } from '@react-three/drei';
 
 export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
-  
+
   useEffect(() => {
     // Check if user prefers dark mode
     const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
     setIsDarkMode(prefersDark);
-    
+
     // Listen for changes in color scheme preference
     const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)");
     const handleChange = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
     mediaQuery.addEventListener("change", handleChange);
-    
+
     return () => mediaQuery.removeEventListener("change", handleChange);
   }, []);
 
+  // Define approximate positions for each model in the scene
+  const modelPositions: [number, number, number][] = [
+    [0, 0, 0],    // 5G Tower (center)
+    [15, 0, 15],   // Air Quality Sensor (Increased spacing)
+    [-15, 0, 15],  // Blade Server
+    [30, 0, 0],    // Env Sensor
+    [-30, 0, 0],   // Laptop
+    [15, 0, -15],  // Motion Sensor
+    [-15, 0, -15], // Motor Actuator
+    [0, 0, 30],    // Residential IoT Gateway
+    [0, 0, -30],   // Smartphone
+    [25, 0, -25],  // Tablet (Adjusted)
+    [-25, 0, -25], // Valve Actuator (Adjusted)
+    [0, 0, -45],   // Vehicle IoT Gateway (Adjusted)
+  ];
+
   return (
-    <div className="min-h-screen p-6 bg-gray-50 dark:bg-gray-900">
-      <h1 className="text-3xl font-bold mb-8 text-center text-gray-800 dark:text-gray-100">3D IoT Components Gallery</h1>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-        {/* Each component is wrapped in a card with title */}
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col items-center">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">5G Tower</h3>
-          <div className="h-[300px] w-full">
-            <FivegTower isDarkMode={isDarkMode} width={300} height={300} />
-          </div>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col items-center">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Air Quality Sensor</h3>
-          <div className="h-[300px] w-full">
-            <AirQualitySensor isDarkMode={isDarkMode} width={300} height={300} />
-          </div>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col items-center">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Blade Server</h3>
-          <div className="h-[300px] w-full">
-            <BladeServer isDarkMode={isDarkMode} width={300} height={300} />
-          </div>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col items-center">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Environmental Sensor</h3>
-          <div className="h-[300px] w-full">
-            <EnvSensor isDarkMode={isDarkMode} width={300} height={300} />
-          </div>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col items-center">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Laptop</h3>
-          <div className="h-[300px] w-full">
-            <Laptop isDarkMode={isDarkMode} width={300} height={300} />
-          </div>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col items-center">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Motion Sensor</h3>
-          <div className="h-[300px] w-full">
-            <MotionSensor isDarkMode={isDarkMode} width={300} height={300} />
-          </div>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col items-center">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Motor Actuator</h3>
-          <div className="h-[300px] w-full">
-            <MotorActuator isDarkMode={isDarkMode} width={300} height={300} />
-          </div>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col items-center">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Residential IoT Gateway</h3>
-          <div className="h-[300px] w-full">
-            <ResidentialIotGateway isDarkMode={isDarkMode} width={300} height={300} />
-          </div>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col items-center">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Smartphone</h3>
-          <div className="h-[300px] w-full">
-            <SmartPhone isDarkMode={isDarkMode} width={300} height={300} />
-          </div>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col items-center">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Tablet</h3>
-          <div className="h-[300px] w-full">
-            <Tablet isDarkMode={isDarkMode} width={300} height={300} />
-          </div>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col items-center">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Valve Actuator</h3>
-          <div className="h-[300px] w-full">
-            <ValveActuator isDarkMode={isDarkMode} width={300} height={300} />
-          </div>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-4 flex flex-col items-center">
-          <h3 className="text-lg font-semibold mb-3 text-gray-800 dark:text-gray-100">Vehicle IoT Gateway</h3>
-          <div className="h-[300px] w-full">
-            <VehicleIotGateway isDarkMode={isDarkMode} width={300} height={300} />
-          </div>
-        </div>
+    <div className="h-screen w-screen p-6 bg-gray-50 dark:bg-gray-900 flex flex-col">
+      <h1 className="text-3xl font-bold mb-4 text-center text-gray-800 dark:text-gray-100">
+        3D IoT Network Visualization
+      </h1>
+      <div className="flex-grow relative">
+        {/* Adjusted camera position - further back */}
+        <Canvas shadows camera={{ position: [0, 15, 60], fov: 50 }}>
+          <Suspense fallback={null}>
+            {/* Add manual lighting */}
+            <ambientLight intensity={isDarkMode ? 0.3 : 0.6} />
+            <directionalLight
+              position={[10, 10, 5]}
+              intensity={1}
+              castShadow
+              shadow-mapSize-width={2048}
+              shadow-mapSize-height={2048}
+            />
+            <directionalLight position={[-10, 10, -5]} intensity={0.5} />
+
+            {/* Position each model using groups, removed scale prop */}
+            <group position={modelPositions[0]}>
+              <FivegTower isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[1]}>
+              <AirQualitySensor isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[2]}>
+              <BladeServer isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[3]}>
+              <EnvSensor isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[4]}>
+              <Laptop isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[5]}>
+              <MotionSensor isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[6]}>
+              <MotorActuator isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[7]}>
+              <ResidentialIotGateway isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[8]}>
+              <SmartPhone isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[9]}>
+              <Tablet isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[10]}>
+              <ValveActuator isDarkMode={isDarkMode} />
+            </group>
+            <group position={modelPositions[11]}>
+              <VehicleIotGateway isDarkMode={isDarkMode} />
+            </group>
+
+            {/* Optional: Add environment for reflections */}
+            <Environment preset={isDarkMode ? "night" : "city"} background={false} />
+
+          </Suspense>
+          {/* Add OrbitControls for interaction */}
+          <OrbitControls makeDefault autoRotate autoRotateSpeed={0.5} />
+        </Canvas>
       </div>
     </div>
   );

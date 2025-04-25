@@ -1,12 +1,15 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import React, { useRef, useMemo, useState, useEffect, useCallback } from 'react';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { useFrame } from '@react-three/fiber';
+import { RoundedBox, Text } from '@react-three/drei'; // Use RoundedBox and Text
 
-// Define interfaces for wave emission data structures
+// --- Interfaces & Types ---
 interface WaveData {
-  mesh: THREE.Mesh;
+  id: number;
+  meshRef: React.RefObject<THREE.Mesh | null>; // Allow null
+  materialRef: React.RefObject<THREE.MeshStandardMaterial | null>; // Allow null
   scale: number;
   opacity: number;
   created: number;
@@ -14,750 +17,598 @@ interface WaveData {
   coneRadius: number;
 }
 
-interface WaveEmitter {
-  group: THREE.Group;
+interface WaveEmitterState {
   waves: WaveData[];
   nextWaveTime: number;
-  protocol: string;
-  interval: number;
-  color: THREE.Color;
 }
 
 type VehicleIoTGatewayProps = {
   isDarkMode?: boolean;
-  width?: number;
-  height?: number;
+  // Removed width and height props
 }
 
-export default function VehicleIoTGateway({ isDarkMode = false, width = 500, height = 400 }: VehicleIoTGatewayProps) {
-  const mountRef = useRef<HTMLDivElement>(null);
-  const sceneRef = useRef<THREE.Scene | null>(null);
-  const gatewayRef = useRef<THREE.Group | null>(null);
-  
-  useEffect(() => {
-    // Define this variable at the top of the useEffect function
-    let displayUpdateInterval: NodeJS.Timeout | undefined;
+// --- Constants ---
+const LENGTH = 12;
+const DEVICE_WIDTH = 8;
+const DEVICE_HEIGHT = 3;
+const HALF_LENGTH = LENGTH / 2;
+const HALF_WIDTH = DEVICE_WIDTH / 2;
+const HALF_HEIGHT = DEVICE_HEIGHT / 2;
+const EDGE_RADIUS = 0.5;
+const SHOCK_ABSORBER_RADIUS = 0.6;
+const SHOCK_ABSORBER_HEIGHT = 0.5;
+const ANTENNA_HOUSING_SIZE = { x: LENGTH / 2, y: 0.8, z: DEVICE_WIDTH / 2 };
+const ANTENNA_BASE_RADIUS = 0.4;
+const ANTENNA_ROD_RADIUS = 0.2;
+const ANTENNA_TIP_RADIUS = 0.2;
+const ANTENNA_TIP_HEIGHT = 0.4;
+const DISPLAY_WIDTH = 6;
+const DISPLAY_HEIGHT = 2;
+const DISPLAY_DEPTH = 0.1;
+const SIM_SLOT_SIZE = { x: 2, y: 0.2, z: 1 };
+const SD_SLOT_SIZE = { x: 2.2, y: 0.3, z: 1.2 };
+const POWER_HOUSING_RADIUS = 1;
+const POWER_HOUSING_LENGTH = 1.5;
+const POWER_TIP_RADIUS = 0.7;
+const POWER_TIP_LENGTH = 0.5;
+const POWER_CABLE_RADIUS = 0.3;
+const POWER_CABLE_LENGTH = 3;
+const ANTENNA_PORT_BASE_RADIUS = 0.4;
+const ANTENNA_PORT_CONNECTOR_RADIUS = 0.25;
+const MOUNT_BRACKET_BASE_SIZE = { x: LENGTH + 2, y: 0.3, z: DEVICE_WIDTH };
+const MOUNT_BRACKET_SIDE_SIZE = { x: 0.5, y: 2, z: DEVICE_WIDTH };
+const MOUNT_HOLE_RADIUS = 0.2;
+const LED_RADIUS = 0.2;
+const LED_HEIGHT = 0.1;
 
-    if (!mountRef.current) return;
-    
-    // Scene, camera, and renderer setup
-    const scene = new THREE.Scene();
-    // Use a soft green-gray instead of blue-gray for light mode
-    scene.background = new THREE.Color(isDarkMode ? 0x0a1a20 : 0xe0f0e8);
-    sceneRef.current = scene;
-    
-    const camera = new THREE.PerspectiveCamera(
-      45, 
-      width / height, 
-      0.1, 
-      1000
-    );
-    camera.position.set(0, 15, 30);
-    
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(width, height);
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    
-    mountRef.current.appendChild(renderer.domElement);
-    
-    // Controls
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.minDistance = 5;
-    controls.maxDistance = 100;
-    
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.7);
-    scene.add(ambientLight);
-    
-    const directionalLight = new THREE.DirectionalLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 1.0);
-    directionalLight.position.set(5, 10, 5);
-    directionalLight.castShadow = true;
-    directionalLight.shadow.mapSize.width = 2048;
-    directionalLight.shadow.mapSize.height = 2048;
-    directionalLight.shadow.camera.near = 0.5;
-    directionalLight.shadow.camera.far = 500;
-    scene.add(directionalLight);
-    
-    const directionalLight2 = new THREE.DirectionalLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.7);
-    directionalLight2.position.set(-5, 8, -10);
-    scene.add(directionalLight2);
-    
-    const pointLight = new THREE.PointLight(isDarkMode ? 0xeef1f7 : 0xdcf0e5, 0.7);
-    pointLight.position.set(-5, 5, -5);
-    scene.add(pointLight);
-    
-    // Materials
-    const mainBodyMaterial = new THREE.MeshStandardMaterial({
+// Wave Animation Config
+const WAVE_CONFIG = {
+  coneAngle: Math.PI / 6,      // 30 degrees cone angle
+  maxHeight: 10,             // Maximum propagation height
+  rotationSpeed: 0.03,       // Rotation speed
+  segments: 32,              // Ring segment count for smoother circles
+  lifespan: 3000,            // Wave lifetime in milliseconds
+  initialRingSize: 0.15,     // Initial ring radius
+  fadeStart: 0.7,            // Start fading after 70% progress
+  expansionRate: 1.5         // Controls cone expansion speed
+};
+
+// --- Materials Hook ---
+const useGatewayMaterials = (isDarkMode: boolean) => {
+  return useMemo(() => ({
+    mainBodyMaterial: new THREE.MeshStandardMaterial({
       color: isDarkMode ? 0x1a2e20 : 0xc0e8d0,
       roughness: 0.7,
-      metalness: 0.3,
-      name: 'main_body'
-    });
-    
-    const antennaBaseMaterial = new THREE.MeshStandardMaterial({
+      metalness: 0.3
+    }),
+    antennaBaseMaterial: new THREE.MeshStandardMaterial({
       color: isDarkMode ? 0x8fffaa : 0x009977,
       roughness: 0.3,
-      metalness: 0.7,
-      name: 'antenna_base'
-    });
-    
-    const screenMaterial = new THREE.MeshStandardMaterial({
+      metalness: 0.7
+    }),
+    screenMaterial: new THREE.MeshStandardMaterial({
       color: isDarkMode ? 0x00ffaa : 0x00aa88,
       roughness: 0.2,
       metalness: 0.8,
       emissive: isDarkMode ? 0x00ffaa : 0x00aa88,
-      emissiveIntensity: isDarkMode ? 0.5 : 0.3,
-      name: 'screen'
-    });
-    
-    const mountingMaterial = new THREE.MeshStandardMaterial({
+      emissiveIntensity: isDarkMode ? 0.5 : 0.3
+    }),
+    mountingMaterial: new THREE.MeshStandardMaterial({
       color: isDarkMode ? 0x44ff66 : 0x006644,
       roughness: 0.3,
-      metalness: 0.7,
-      name: 'mounting'
-    });
-    
-    const connectorMaterial = new THREE.MeshStandardMaterial({
+      metalness: 0.7
+    }),
+    connectorMaterial: new THREE.MeshStandardMaterial({
       color: 0x333333,
       roughness: 0.4,
-      metalness: 0.7,
-      name: 'connector'
-    });
-    
-    const rubberizerMaterial = new THREE.MeshStandardMaterial({
+      metalness: 0.7
+    }),
+    rubberizerMaterial: new THREE.MeshStandardMaterial({
       color: 0x444444,
       roughness: 0.9,
-      metalness: 0.1,
-      name: 'rubberizer'
-    });
-    
-    const vehiclePowerMaterial = new THREE.MeshStandardMaterial({
+      metalness: 0.1
+    }),
+    vehiclePowerMaterial: new THREE.MeshStandardMaterial({
       color: 0x111111,
       roughness: 0.2,
-      metalness: 0.9,
-      name: 'vehicle_power'
-    });
-    
-    // Dimensions (12cm length, 8cm width, 3cm height - scaled up for visibility)
-    const length = 12;
-    const deviceWidth = 8;
-    const deviceHeight = 3;
-    
-    // Gateway body
-    const gatewayGroup = new THREE.Group();
-    scene.add(gatewayGroup);
-    gatewayRef.current = gatewayGroup;
-    
-    // Main body - rugged box with rounded edges
-    const mainBody = (() => {
-      // Create a geometry with rounded corners
-      const bodyGroup = new THREE.Group();
-      
-      // Create base box
-      const bodyGeometry = new THREE.BoxGeometry(length, deviceHeight, deviceWidth);
-      const body = new THREE.Mesh(bodyGeometry, mainBodyMaterial);
-      body.castShadow = true;
-      body.receiveShadow = true;
-      bodyGroup.add(body);
-      
-      // Add edge bevels for rugged look
-      const edgeRadius = 0.5;
-      const bevelSegments = 3;
-      
-      // Helper function to add beveled edge
-      const addEdge = (x: number, y: number, z: number, rx: number, ry: number, rz: number, length: number) => {
-        const edgeGeometry = new THREE.CylinderGeometry(edgeRadius, edgeRadius, length, bevelSegments * 2);
-        const edge = new THREE.Mesh(edgeGeometry, mainBodyMaterial);
-        edge.position.set(x, y, z);
-        edge.rotation.set(rx, ry, rz);
-        edge.castShadow = true;
-        bodyGroup.add(edge);
-      };
-      
-      // Vertical edges
-      const halfLength = length / 2;
-      const halfWidth = deviceWidth / 2;
-      const halfHeight = deviceHeight / 2;
-      
-      // Front vertical edges
-      addEdge(halfLength - edgeRadius, 0, halfWidth - edgeRadius, 0, 0, 0, height);
-      addEdge(halfLength - edgeRadius, 0, -halfWidth + edgeRadius, 0, 0, 0, height);
-      
-      // Back vertical edges
-      addEdge(-halfLength + edgeRadius, 0, halfWidth - edgeRadius, 0, 0, 0, height);
-      addEdge(-halfLength + edgeRadius, 0, -halfWidth + edgeRadius, 0, 0, 0, height);
-      
-      // Horizontal edges - top face
-      addEdge(0, halfHeight - edgeRadius, halfWidth - edgeRadius, Math.PI/2, 0, 0, length - edgeRadius * 2);
-      addEdge(0, halfHeight - edgeRadius, -halfWidth + edgeRadius, Math.PI/2, 0, 0, length - edgeRadius * 2);
-      
-      // Horizontal edges - front and back of top face
-      addEdge(halfLength - edgeRadius, halfHeight - edgeRadius, 0, 0, 0, Math.PI/2, width - edgeRadius * 2);
-      addEdge(-halfLength + edgeRadius, halfHeight - edgeRadius, 0, 0, 0, Math.PI/2, width - edgeRadius * 2);
-      
-      // Horizontal edges - bottom face
-      addEdge(0, -halfHeight + edgeRadius, halfWidth - edgeRadius, Math.PI/2, 0, 0, length - edgeRadius * 2);
-      addEdge(0, -halfHeight + edgeRadius, -halfWidth + edgeRadius, Math.PI/2, 0, 0, length - edgeRadius * 2);
-      
-      // Horizontal edges - front and back of bottom face
-      addEdge(halfLength - edgeRadius, -halfHeight + edgeRadius, 0, 0, 0, Math.PI/2, width - edgeRadius * 2);
-      addEdge(-halfLength + edgeRadius, -halfHeight + edgeRadius, 0, 0, 0, Math.PI/2, width - edgeRadius * 2);
-      
-      // Corner spheres to complete the rounded edges
-      const addCornerSphere = (x: number, y: number, z: number) => {
-        const cornerGeometry = new THREE.SphereGeometry(edgeRadius, bevelSegments * 2, bevelSegments * 2);
-        const corner = new THREE.Mesh(cornerGeometry, mainBodyMaterial);
-        corner.position.set(x, y, z);
-        corner.castShadow = true;
-        bodyGroup.add(corner);
-      };
-      
-      // Top corners
-      addCornerSphere(halfLength - edgeRadius, halfHeight - edgeRadius, halfWidth - edgeRadius);
-      addCornerSphere(halfLength - edgeRadius, halfHeight - edgeRadius, -halfWidth + edgeRadius);
-      addCornerSphere(-halfLength + edgeRadius, halfHeight - edgeRadius, halfWidth - edgeRadius);
-      addCornerSphere(-halfLength + edgeRadius, halfHeight - edgeRadius, -halfWidth + edgeRadius);
-      
-      // Bottom corners
-      addCornerSphere(halfLength - edgeRadius, -halfHeight + edgeRadius, halfWidth - edgeRadius);
-      addCornerSphere(halfLength - edgeRadius, -halfHeight + edgeRadius, -halfWidth + edgeRadius);
-      addCornerSphere(-halfLength + edgeRadius, -halfHeight + edgeRadius, halfWidth - edgeRadius);
-      addCornerSphere(-halfLength + edgeRadius, -halfHeight + edgeRadius, -halfWidth + edgeRadius);
-      
-      return bodyGroup;
-    })();
-    
-    gatewayGroup.add(mainBody);
-    
-    // Add shock absorbers/vibration isolators at each corner
-    const addShockAbsorber = (x: number, y: number, z: number) => {
-      const shockGroup = new THREE.Group();
-      
-      // Rubber isolator part
-      const rubberGeometry = new THREE.CylinderGeometry(0.6, 0.6, 0.5, 16);
-      const rubber = new THREE.Mesh(rubberGeometry, rubberizerMaterial);
-      rubber.position.y = -0.25;
-      shockGroup.add(rubber);
-      
-      // Metal cap
-      const capGeometry = new THREE.CylinderGeometry(0.5, 0.5, 0.2, 16);
-      const cap = new THREE.Mesh(capGeometry, connectorMaterial);
-      cap.position.y = -0.6;
-      shockGroup.add(cap);
-      
-      shockGroup.position.set(x, y, z);
-      return shockGroup;
-    };
-    
-    // Position shock absorbers slightly inward from corners
-    const shockPositionOffset = 0.8;
-    const halfLength = length / 2;
-    const halfWidth = width / 2;
-    const halfHeight = height / 2;
-    
-    // Add shock absorbers at each corner of the bottom face
-    gatewayGroup.add(addShockAbsorber(halfLength - shockPositionOffset, -halfHeight, halfWidth - shockPositionOffset));
-    gatewayGroup.add(addShockAbsorber(halfLength - shockPositionOffset, -halfHeight, -halfWidth + shockPositionOffset));
-    gatewayGroup.add(addShockAbsorber(-halfLength + shockPositionOffset, -halfHeight, halfWidth - shockPositionOffset));
-    gatewayGroup.add(addShockAbsorber(-halfLength + shockPositionOffset, -halfHeight, -halfWidth + shockPositionOffset));
-    
-    // Antenna section on top
-    const antennaSection = (() => {
-      const antennaGroup = new THREE.Group();
-      
-      // Update wave configuration parameters with improved values
-      const WAVE_CONFIG = {
-        coneAngle: Math.PI/6,      // 30 degrees cone angle
-        maxHeight: 10,             // Maximum propagation height
-        rotationSpeed: 0.03,       // Rotation speed
-        segments: 32,              // Ring segment count for smoother circles
-        lifespan: 3000,            // Wave lifetime in milliseconds
-        initialRingSize: 0.15,     // Initial ring radius
-        fadeStart: 0.7,            // Start fading after 70% progress
-        expansionRate: 1.5         // Controls cone expansion speed
-      };
+      metalness: 0.9
+    }),
+    ledGreen: new THREE.MeshStandardMaterial({ color: 0x00ff00, emissive: 0x00ff00, emissiveIntensity: 0.8 }),
+    ledBlue: new THREE.MeshStandardMaterial({ color: 0x0000ff, emissive: 0x0000ff, emissiveIntensity: 0.8 }),
+    ledRed: new THREE.MeshStandardMaterial({ color: 0xff0000, emissive: 0xff0000, emissiveIntensity: 0.8 }),
+    ledYellow: new THREE.MeshStandardMaterial({ color: 0xffff00, emissive: 0xffff00, emissiveIntensity: 0.8 }),
+    mountHole: new THREE.MeshBasicMaterial({ color: 0x000000 }),
+    waveMaterialBase: (color: THREE.Color) => new THREE.MeshStandardMaterial({
+        color: color,
+        side: THREE.DoubleSide,
+        transparent: true,
+        opacity: 0.8,
+        depthWrite: false,
+        metalness: 0.3,
+        roughness: 0.4,
+        emissive: color,
+        emissiveIntensity: 0.3
+      }),
+  }), [isDarkMode]);
+};
 
-      // Main antenna housing - elevated platform on top of device
-      const housingGeometry = new THREE.BoxGeometry(length / 2, 0.8, width / 2);
-      const housing = new THREE.Mesh(housingGeometry, antennaBaseMaterial);
-      housing.position.y = halfHeight + 0.4;
-      housing.position.x = -length / 4; // Position toward the rear
-      antennaGroup.add(housing);
-      
-      // Store wave emission points and their data
-      const waveGroups: WaveEmitter[] = [];
-      
-      // Cellular antenna (tallest)
-      const createAntenna = (x: number, z: number, height: number, protocolName: string, waveColor: THREE.Color) => {
-        const subGroup = new THREE.Group();
-        
-        // Antenna base
-        const baseGeometry = new THREE.CylinderGeometry(0.4, 0.5, 0.3, 16);
-        const base = new THREE.Mesh(baseGeometry, connectorMaterial);
-        subGroup.add(base);
-        
-        // Antenna rod
-        const rodGeometry = new THREE.CylinderGeometry(0.2, 0.2, height, 8);
-        const rod = new THREE.Mesh(rodGeometry, connectorMaterial);
-        rod.position.y = height / 2 + 0.15;
-        subGroup.add(rod);
-        
-        // Antenna tip
-        const tipGeometry = new THREE.ConeGeometry(0.2, 0.4, 8);
-        const tip = new THREE.Mesh(tipGeometry, antennaBaseMaterial);
-        tip.position.y = height + 0.35;
-        subGroup.add(tip);
-        
-        // Create wave emission point at the tip of the antenna
-        const waveGroup = new THREE.Group();
-        waveGroup.position.y = height + 0.55; // Position at the very tip
-        subGroup.add(waveGroup);
-        
-        // Store for animation
-        waveGroups.push({
-          group: waveGroup,
-          waves: [],
-          nextWaveTime: 0,
-          protocol: protocolName,
-          interval: 1500 + Math.random() * 1000, // Random interval between 1.5-2.5 seconds
-          color: waveColor
-        });
-        
-        subGroup.position.set(x, halfHeight + 0.8, z);
-        return subGroup;
+// --- Helper Components ---
+
+// Shock Absorber Component
+const ShockAbsorber = React.memo(({ position, materials }: { position: [number, number, number], materials: ReturnType<typeof useGatewayMaterials> }) => (
+  <group position={position}>
+    <mesh material={materials.rubberizerMaterial} position-y={-SHOCK_ABSORBER_HEIGHT / 2}>
+      <cylinderGeometry args={[SHOCK_ABSORBER_RADIUS, SHOCK_ABSORBER_RADIUS, SHOCK_ABSORBER_HEIGHT, 16]} />
+    </mesh>
+    <mesh material={materials.connectorMaterial} position-y={-SHOCK_ABSORBER_HEIGHT - 0.1}>
+      <cylinderGeometry args={[SHOCK_ABSORBER_RADIUS * 0.8, SHOCK_ABSORBER_RADIUS * 0.8, 0.2, 16]} />
+    </mesh>
+  </group>
+));
+ShockAbsorber.displayName = 'ShockAbsorber';
+
+// Antenna Component with Wave Emitter Logic
+const Antenna = React.memo(({
+  position,
+  antennaHeight,
+  label,
+  waveColor,
+  materials,
+  isDarkMode,
+  waveInterval
+}: {
+  position: [number, number, number];
+  antennaHeight: number;
+  label: string;
+  waveColor: THREE.Color;
+  materials: ReturnType<typeof useGatewayMaterials>;
+  isDarkMode: boolean;
+  waveInterval: number;
+}) => {
+  const waveGroupRef = useRef<THREE.Group>(null);
+  const [emitterState, setEmitterState] = useState<WaveEmitterState>({ waves: [], nextWaveTime: 0 });
+  const waveMaterial = useMemo(() => materials.waveMaterialBase(waveColor), [materials, waveColor]);
+  let waveCounter = useRef(0);
+
+  useFrame(() => {
+    const now = Date.now();
+    let updatedWaves = [...emitterState.waves];
+    let needsUpdate = false;
+
+    // Create new wave
+    if (now >= emitterState.nextWaveTime) {
+      const newWave: WaveData = {
+        id: waveCounter.current++,
+        meshRef: React.createRef(),
+        materialRef: React.createRef(),
+        scale: 1,
+        opacity: 0.8,
+        created: now,
+        coneHeight: 0,
+        coneRadius: WAVE_CONFIG.initialRingSize,
       };
-      
-      // Add different antennas with varying heights and different wave colors
-      antennaGroup.add(createAntenna(-length/4 - 1, 0, 2.5, "CELL", new THREE.Color(0x00aaff)));
-      antennaGroup.add(createAntenna(-length/4, -width/6, 2.0, "GPS", new THREE.Color(0xffaa00)));
-      antennaGroup.add(createAntenna(-length/4, width/6, 1.5, "WIFI", new THREE.Color(0x00ff88)));
-      antennaGroup.add(createAntenna(-length/4 + 1, 0, 1.8, "BT/ZB", new THREE.Color(0x8844ff)));
-      
-      // Function to create and animate waves
-      const createWave = (waveData: WaveEmitter) => {
-        const { group, color } = waveData;
-        
-        // Create a ring geometry with more segments for smoothness
-        const ringGeometry = new THREE.RingGeometry(
-          WAVE_CONFIG.initialRingSize * 0.7,  // Inner radius
-          WAVE_CONFIG.initialRingSize,        // Outer radius
-          WAVE_CONFIG.segments                // Segments for smooth circle
-        );
-        
-        // Create material with depth writing disabled for better transparency
-        const waveMaterial = new THREE.MeshStandardMaterial({
-          color: color,
-          side: THREE.DoubleSide,
-          transparent: true,
-          opacity: 0.8,
-          depthWrite: false,
-          metalness: 0.3,
-          roughness: 0.4,
-          emissive: color,
-          emissiveIntensity: 0.3,
-          name: 'wave'
-        });
-        
-        const wave = new THREE.Mesh(ringGeometry, waveMaterial);
-        
-        // Critical rotation adjustment: Rotate 90 degrees around X-axis
-        // This makes the ring vertical (parallel to the antenna)
-        wave.rotation.x = Math.PI / 2;
-        
-        // Initial position at antenna tip
-        wave.position.set(0, 0, 0);
-        
-        group.add(wave);
-        
-        // Store wave data for animation
-        waveData.waves.push({
-          mesh: wave,
-          scale: 1,
-          opacity: 0.8,
-          created: Date.now(),
-          coneHeight: 0,
-          coneRadius: WAVE_CONFIG.initialRingSize
-        });
-      };
-      
-      // Animation function for waves
-      const animateWaves = () => {
-        const now = Date.now();
-        
-        waveGroups.forEach(waveData => {
-          // Create new wave at intervals
-          if (now >= waveData.nextWaveTime) {
-            createWave(waveData);
-            waveData.nextWaveTime = now + waveData.interval;
-          }
-          
-          // Animate existing waves
-          for (let i = waveData.waves.length - 1; i >= 0; i--) {
-            const wave = waveData.waves[i];
-            const age = now - wave.created;
-            const lifespan = WAVE_CONFIG.lifespan;
-            
-            if (age < lifespan) {
-              const progress = age / lifespan;
-              
-              // Calculate height based on progress
-              const height = progress * WAVE_CONFIG.maxHeight;
-              
-              // Calculate radius based on cone angle and height
-              // This uses proper trigonometry for conical expansion
-              const radius = Math.tan(WAVE_CONFIG.coneAngle) * height;
-              
-              // Update position - move upward along Y axis (antenna direction)
-              wave.mesh.position.y = height;
-              
-              // Scale the ring to match the cone radius at current height
-              // This creates the conical expansion effect
-              const ringScale = 1 + radius / WAVE_CONFIG.initialRingSize;
-              wave.mesh.scale.set(ringScale, ringScale, 1);
-              
-              // Add rotation animation for better visual effect
-              wave.mesh.rotation.z += WAVE_CONFIG.rotationSpeed;
-              
-              // Fade out gradually - more transparent as it moves up
-              const newOpacity = 0.8 * (1 - progress);
-              
-              if (wave.mesh.material) {
-                if (Array.isArray(wave.mesh.material)) {
-                  wave.mesh.material.forEach(mat => {
-                    mat.opacity = newOpacity;
-                  });
-                } else {
-                  wave.mesh.material.opacity = newOpacity;
-                }
-              }
-              
-              // Update tracking values
-              wave.coneHeight = height;
-              wave.opacity = newOpacity;
-              
-            } else {
-              // Remove expired waves
-              waveData.group.remove(wave.mesh);
-              wave.mesh.geometry.dispose();
-              
-              if (Array.isArray(wave.mesh.material)) {
-                wave.mesh.material.forEach(mat => {
-                  mat.dispose();
-                });
-              } else {
-                wave.mesh.material.dispose();
-              }
-              
-               waveData.waves.splice(i, 1);
-            }
-          }
-        });
-      };
-      
-      // Store animation function on group for access in main loop
-      antennaGroup.userData.animateWaves = animateWaves;
-      
-      return antennaGroup;
-    })();
-    
-    gatewayGroup.add(antennaSection);
-    
-    // Status display on the front
-    const statusDisplay = (() => {
-      const displayGroup = new THREE.Group();
-      
-      // Display housing
-      const displayWidth = 6;
-      const displayHeight = 2;
-      const displayDepth = 0.1;
-      
-      // Display bezel
-      const bezelGeometry = new THREE.BoxGeometry(displayWidth + 0.4, displayHeight + 0.4, displayDepth);
-      const bezel = new THREE.Mesh(bezelGeometry, mainBodyMaterial);
-      bezel.position.set(length/2 - 0.05, 0, 0);
-      bezel.rotation.y = Math.PI / 2;
-      displayGroup.add(bezel);
-      
-      // Display screen
-      const screenGeometry = new THREE.PlaneGeometry(displayWidth, displayHeight);
-      const screen = new THREE.Mesh(screenGeometry, screenMaterial);
-      screen.position.set(length/2 + 0.01, 0, 0);
-      screen.rotation.y = Math.PI / 2;
-      displayGroup.add(screen);
-      
-      // Create texture for display content
-      const createDisplayContent = () => {
-        const canvas = document.createElement('canvas');
-        const context = canvas.getContext('2d');
-        canvas.width = 512;
-        canvas.height = 256;
-        
-        if (context) {
-          // Background
-          context.fillStyle = '#000000';
-          context.fillRect(0, 0, canvas.width, canvas.height);
-          
-          // Draw border
-          context.strokeStyle = isDarkMode ? '#00ffaa' : '#00aa88';
-          context.lineWidth = 4;
-          context.strokeRect(4, 4, canvas.width - 8, canvas.height - 8);
-          
-          // Draw UI elements
-          context.font = 'bold 16px Arial';
-          context.fillStyle = '#00ff00';
-          context.textAlign = 'center';
-          context.fillText("● ONLINE", canvas.width / 2, canvas.height - 20);
-          
-          // Apply texture to screen
-          const texture = new THREE.CanvasTexture(canvas);
-          screen.material = new THREE.MeshStandardMaterial({
-            map: texture,
-            emissive: isDarkMode ? 0x00ffaa : 0x00aa88,
-            emissiveIntensity: isDarkMode ? 0.5 : 0.3,
-            roughness: 0.2,
-            metalness: 0.8,
-            name: 'screen'
-          });
-        }
-      };
-      
-      createDisplayContent();
-      
-      // Update display periodically
-      displayUpdateInterval = setInterval(createDisplayContent, 1000);
-      
-      return displayGroup;
-    })();
-    
-    gatewayGroup.add(statusDisplay);
-    
-    // SIM card slot and memory expansion
-    const cardSlots = (() => {
-      const slotGroup = new THREE.Group();
-      
-      // SIM card slot
-      const simSlotGeometry = new THREE.BoxGeometry(2, 0.2, 1);
-      const simSlot = new THREE.Mesh(simSlotGeometry, connectorMaterial);
-      simSlot.position.set(-length/2 + 1.5, 0.5, width/2 + 0.01);
-      simSlot.rotation.y = Math.PI / 2;
-      simSlot.rotation.z = Math.PI / 2;
-      slotGroup.add(simSlot);
-      
-      // SD card slot
-      const sdSlotGeometry = new THREE.BoxGeometry(2.2, 0.3, 1.2);
-      const sdSlot = new THREE.Mesh(sdSlotGeometry, connectorMaterial);
-      sdSlot.position.set(-length/2 + 1.5, -0.5, width/2 + 0.01);
-      sdSlot.rotation.y = Math.PI / 2;
-      sdSlot.rotation.z = Math.PI / 2;
-      slotGroup.add(sdSlot);
-      
-      return slotGroup;
-    })();
-    
-    gatewayGroup.add(cardSlots);
-    
-    // Vehicle power adapter with voltage regulator
-    const vehiclePower = (() => {
-      const powerGroup = new THREE.Group();
-      
-      // Power connector housing
-      const housingGeometry = new THREE.CylinderGeometry(1, 1, 1.5, 16);
-      const housing = new THREE.Mesh(housingGeometry, vehiclePowerMaterial);
-      housing.rotation.x = Math.PI / 2;
-      housing.position.set(-length/2 - 1, 0, -width/4);
-      powerGroup.add(housing);
-      
-      // Power connector tip
-      const tipGeometry = new THREE.CylinderGeometry(0.7, 0.8, 0.5, 16);
-      const tip = new THREE.Mesh(tipGeometry, connectorMaterial);
-      tip.rotation.x = Math.PI / 2;
-      tip.position.set(-length/2 - 2, 0, -width/4);
-      powerGroup.add(tip);
-      
-      // Cable
-      const cableGeometry = new THREE.CylinderGeometry(0.3, 0.3, 3, 8);
-      const cable = new THREE.Mesh(cableGeometry, vehiclePowerMaterial);
-      cable.position.set(-length/2 - 3, 0, -width/4);
-      cable.rotation.z = Math.PI / 2;
-      powerGroup.add(cable);
-      
-      return powerGroup;
-    })();
-    
-    gatewayGroup.add(vehiclePower);
-    
-    // External antenna ports
-    const antennaPorts = (() => {
-      const portGroup = new THREE.Group();
-      
-      const createAntennaPort = (x: number, z: number) => {
-        const subGroup = new THREE.Group();
-        
-        // Port base
-        const baseGeometry = new THREE.CylinderGeometry(0.4, 0.4, 0.2, 16);
-        const base = new THREE.Mesh(baseGeometry, connectorMaterial);
-        base.rotation.x = Math.PI / 2;
-        subGroup.add(base);
-        
-        // Port connector
-        const connectorGeometry = new THREE.CylinderGeometry(0.25, 0.3, 0.3, 16);
-        const connector = new THREE.Mesh(connectorGeometry, vehiclePowerMaterial);
-        connector.rotation.x = Math.PI / 2;
-        connector.position.z = -0.2;
-        subGroup.add(connector);
-        
-        subGroup.position.set(x, z, -width/2 - 0.01);
-        return subGroup;
-      };
-      
-      // Add antenna ports to the back side
-      portGroup.add(createAntennaPort(-length/4, 1));
-      portGroup.add(createAntennaPort(0, 1));
-      portGroup.add(createAntennaPort(length/4, 1));
-      
-      return portGroup;
-    })();
-    
-    gatewayGroup.add(antennaPorts);
-    
-    // Mounting options
-    const mountingOptions = (() => {
-      const mountGroup = new THREE.Group();
-      
-      // Bracket mount
-      const bracketGroup = new THREE.Group();
-      
-      // Horizontal part
-      const bracketBaseGeometry = new THREE.BoxGeometry(length + 2, 0.3, width);
-      const bracketBase = new THREE.Mesh(bracketBaseGeometry, mountingMaterial);
-      bracketBase.position.y = -halfHeight - 0.3;
-      bracketGroup.add(bracketBase);
-      
-      // Vertical parts
-      const bracketSideGeometry = new THREE.BoxGeometry(0.5, 2, width);
-      
-      const bracketSide1 = new THREE.Mesh(bracketSideGeometry, mountingMaterial);
-      bracketSide1.position.set((length + 2) / 2 - 0.25, -halfHeight - 1.3, 0);
-      bracketGroup.add(bracketSide1);
-      
-      const bracketSide2 = new THREE.Mesh(bracketSideGeometry, mountingMaterial);
-      bracketSide2.position.set(-(length + 2) / 2 + 0.25, -halfHeight - 1.3, 0);
-      bracketGroup.add(bracketSide2);
-      
-      // Mounting holes
-      const holeGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.5, 16);
-      const holeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
-      
-      const hole1 = new THREE.Mesh(holeGeometry, holeMaterial);
-      hole1.position.set((length + 2) / 2 - 0.25, -halfHeight - 2.3, width/3);
-      hole1.rotation.x = Math.PI / 2;
-      bracketGroup.add(hole1);
-      
-      const hole2 = new THREE.Mesh(holeGeometry, holeMaterial);
-      hole2.position.set((length + 2) / 2 - 0.25, -halfHeight - 2.3, -width/3);
-      hole2.rotation.x = Math.PI / 2;
-      bracketGroup.add(hole2);
-      
-      const hole3 = new THREE.Mesh(holeGeometry, holeMaterial);
-      hole3.position.set(-(length + 2) / 2 + 0.25, -halfHeight - 2.3, width/3);
-      hole3.rotation.x = Math.PI / 2;
-      bracketGroup.add(hole3);
-      
-      const hole4 = new THREE.Mesh(holeGeometry, holeMaterial);
-      hole4.position.set(-(length + 2) / 2 + 0.25, -halfHeight - 2.3, -width/3);
-      hole4.rotation.x = Math.PI / 2;
-      bracketGroup.add(hole4);
-      
-      mountGroup.add(bracketGroup);
-      
-      return mountGroup;
-    })();
-    
-    gatewayGroup.add(mountingOptions);
-    
-    // Status LEDs
-    const statusLEDs = (() => {
-      const ledGroup = new THREE.Group();
-      
-      // Create a row of LEDs on the top
-      const createLED = (x: number, color: THREE.Color) => {
-        const ledGeometry = new THREE.CylinderGeometry(0.2, 0.2, 0.1, 16);
-        const ledMaterial = new THREE.MeshStandardMaterial({
-          color: color,
-          emissive: color,
-          emissiveIntensity: 0.8,
-          name: 'led'
-        });
-        
-        const led = new THREE.Mesh(ledGeometry, ledMaterial);
-        led.position.set(x, halfHeight + 0.05, width/2 - 0.5);
-        led.rotation.x = Math.PI / 2;
-        
-        // Add a small point light to enhance the glow effect
-        const ledLight = new THREE.PointLight(color, 0.5, 1.5);
-        ledLight.position.set(0, 0.1, 0);
-        led.add(ledLight);
-        
-        return led;
-      };
-      
-      // Add LEDs with different colors
-      ledGroup.add(createLED(length/2 - 1, new THREE.Color(0x00ff00))); // Green - power
-      ledGroup.add(createLED(length/2 - 2, new THREE.Color(0x0000ff))); // Blue - Bluetooth
-      ledGroup.add(createLED(length/2 - 3, new THREE.Color(0xff0000))); // Red - error
-      ledGroup.add(createLED(length/2 - 4, new THREE.Color(0xffff00))); // Yellow - activity
-      
-      return ledGroup;
-    })();
-    
-    gatewayGroup.add(statusLEDs);
-    
-    // Set initial position
-    gatewayGroup.rotation.y = Math.PI / 4;
-    
-    // Handle resize
-    const handleResize = () => {
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
-    };
-    
-    window.addEventListener('resize', handleResize);
-    
-    // Animation loop
-    const animate = () => {
-      requestAnimationFrame(animate);
-      
-      // Animate the antenna waves if function exists
-      if (antennaSection.userData && antennaSection.userData.animateWaves) {
-        antennaSection.userData.animateWaves();
+      updatedWaves.push(newWave);
+      setEmitterState(prev => ({ ...prev, nextWaveTime: now + waveInterval, waves: updatedWaves }));
+      needsUpdate = true;
+    }
+
+    // Animate existing waves
+    for (let i = updatedWaves.length - 1; i >= 0; i--) {
+      const wave = updatedWaves[i];
+      const age = now - wave.created;
+      const lifespan = WAVE_CONFIG.lifespan;
+
+      if (age < lifespan) {
+        const progress = age / lifespan;
+        const waveHeight = progress * WAVE_CONFIG.maxHeight;
+        const radius = Math.tan(WAVE_CONFIG.coneAngle) * waveHeight;
+        const ringScale = 1 + radius / WAVE_CONFIG.initialRingSize;
+        const newOpacity = 0.8 * (1 - progress);
+
+        // Update wave data (will be used by the WaveMesh component)
+        wave.coneHeight = waveHeight;
+        wave.scale = ringScale;
+        wave.opacity = newOpacity;
+        needsUpdate = true; // Mark for potential state update if values changed significantly
+
+      } else {
+        // Remove expired waves
+        updatedWaves.splice(i, 1);
+        needsUpdate = true;
       }
-      
-      controls.update();
-      renderer.render(scene, camera);
-    };
-    
-    animate();
-    
-    // Cleanup function
-    return () => {
-      if (displayUpdateInterval) {
-        clearInterval(displayUpdateInterval);
-      }
-      
-      if (mountRef.current) {
-        mountRef.current.removeChild(renderer.domElement);
-      }
-      
-      window.removeEventListener('resize', handleResize);
-      controls.dispose();
-    };
-  }, [isDarkMode, width, height]);
-  
+    }
+
+    // Only update state if waves array changed length or significant updates occurred
+    // This check might need refinement based on performance
+    if (needsUpdate && updatedWaves.length !== emitterState.waves.length) {
+         setEmitterState(prev => ({ ...prev, waves: updatedWaves }));
+    }
+    // If only properties changed, the WaveMesh component will handle updates via refs
+
+  });
+
   return (
-    <div ref={mountRef} style={{ width, height }} />
+    <group position={position}>
+      {/* Antenna Base */}
+      <mesh material={materials.connectorMaterial}>
+        <cylinderGeometry args={[ANTENNA_BASE_RADIUS, ANTENNA_BASE_RADIUS * 1.2, 0.3, 16]} />
+      </mesh>
+      {/* Antenna Rod */}
+      <mesh material={materials.connectorMaterial} position-y={antennaHeight / 2 + 0.15}>
+        <cylinderGeometry args={[ANTENNA_ROD_RADIUS, ANTENNA_ROD_RADIUS, antennaHeight, 8]} />
+      </mesh>
+      {/* Antenna Tip */}
+      <mesh material={materials.antennaBaseMaterial} position-y={antennaHeight + 0.35}>
+        <coneGeometry args={[ANTENNA_TIP_RADIUS, ANTENNA_TIP_HEIGHT, 8]} />
+      </mesh>
+      {/* Wave Emission Point & Waves */}
+      <group ref={waveGroupRef} position-y={antennaHeight + 0.55}>
+        {emitterState.waves.map(wave => (
+          <WaveMesh key={wave.id} waveData={wave} material={waveMaterial} />
+        ))}
+      </group>
+      {/* Label */}
+      <Text
+        color={isDarkMode ? '#ccddee' : '#335544'}
+        fontSize={0.5}
+        position={[0, 0.5, 0.7]}
+        rotation={[-Math.PI / 6, 0, 0]}
+        anchorX="center"
+        anchorY="middle"
+      >
+        {label}
+      </Text>
+    </group>
+  );
+});
+Antenna.displayName = 'Antenna';
+
+// Wave Mesh Component (Handles individual wave animation updates)
+const WaveMesh = ({ waveData, material }: { waveData: WaveData, material: THREE.MeshStandardMaterial }) => {
+  const meshRef = useRef<THREE.Mesh>(null!);
+  const matRef = useRef<THREE.MeshStandardMaterial>(null!);
+
+  useFrame(() => {
+    if (meshRef.current && matRef.current) {
+      meshRef.current.position.y = waveData.coneHeight;
+      meshRef.current.scale.set(waveData.scale, waveData.scale, 1);
+      meshRef.current.rotation.z += WAVE_CONFIG.rotationSpeed;
+      matRef.current.opacity = waveData.opacity;
+    }
+  });
+
+  return (
+    <mesh ref={meshRef} rotation-x={Math.PI / 2}>
+      <ringGeometry args={[WAVE_CONFIG.initialRingSize * 0.7, WAVE_CONFIG.initialRingSize, WAVE_CONFIG.segments]} />
+      <primitive object={material.clone()} ref={matRef} attach="material" />
+    </mesh>
+  );
+};
+
+// Status Display Component
+const StatusDisplay = React.memo(({ position, rotation, materials, isDarkMode }: {
+  position: [number, number, number];
+  rotation: [number, number, number];
+  materials: ReturnType<typeof useGatewayMaterials>;
+  isDarkMode: boolean;
+}) => {
+  const [timeString, setTimeString] = useState('');
+  const [strengths, setStrengths] = useState({ cell: 0, gps: 0, wifi: 0, vehicle: 0 });
+  const textMaterial = useMemo(() => new THREE.MeshBasicMaterial({ color: isDarkMode ? '#00ffaa' : '#00aa88' }), [isDarkMode]);
+  const valueMaterial = useMemo(() => new THREE.MeshBasicMaterial({ color: '#ccddee' }), []);
+  const statusMaterial = useMemo(() => new THREE.MeshBasicMaterial({ color: '#00ff00' }), []);
+
+  useFrame(({ clock }) => {
+    const now = new Date();
+    setTimeString(now.toLocaleTimeString());
+
+    const t = clock.elapsedTime;
+    setStrengths({
+      cell: 75 + 15 * Math.sin(t * 0.3),
+      gps: 85 + 10 * Math.sin(t * 0.2 + 1),
+      wifi: 60 + 20 * Math.sin(t * 0.4 + 2),
+      vehicle: 95 + 5 * Math.sin(t * 0.1),
+    });
+  });
+
+  const StrengthBar = ({ y, label, strength }: { y: number, label: string, strength: number }) => {
+    const barWidth = DISPLAY_WIDTH * 0.4;
+    const barHeight = DISPLAY_HEIGHT * 0.08;
+    const activeWidth = barWidth * (strength / 100);
+    const strengthColor = strength > 70 ? '#00ff00' : strength > 30 ? '#ffff00' : '#ff0000';
+
+    return (
+      <group position-y={y}>
+        <Text material={valueMaterial} fontSize={0.18} anchorX="left" position={[-DISPLAY_WIDTH * 0.45, 0, 0.01]}>{label}</Text>
+        {/* Background Bar */}
+        <mesh position={[DISPLAY_WIDTH * 0.05, 0, 0.01]}>
+          <planeGeometry args={[barWidth, barHeight]} />
+          <meshBasicMaterial color="#333333" />
+        </mesh>
+        {/* Active Bar */}
+        <mesh position={[-DISPLAY_WIDTH * 0.15 + activeWidth / 2, 0, 0.02]}>
+          <planeGeometry args={[activeWidth, barHeight]} />
+          <meshBasicMaterial color={strengthColor} />
+        </mesh>
+        <Text material={valueMaterial} fontSize={0.15} anchorX="left" position={[DISPLAY_WIDTH * 0.3, 0, 0.01]}>{`${Math.round(strength)}%`}</Text>
+      </group>
+    );
+  };
+
+  return (
+    <group position={position} rotation={rotation}>
+      {/* Bezel */}
+      <mesh material={materials.mainBodyMaterial} position-z={-DISPLAY_DEPTH * 0.6}>
+        <boxGeometry args={[DISPLAY_WIDTH + 0.4, DISPLAY_HEIGHT + 0.4, DISPLAY_DEPTH]} />
+      </mesh>
+      {/* Screen Background */}
+      <mesh material={materials.screenMaterial}>
+        <planeGeometry args={[DISPLAY_WIDTH, DISPLAY_HEIGHT]} />
+      </mesh>
+      {/* Content Group (relative positioning) */}
+      <group position-z={0.01}> {/* Bring content slightly forward */}
+        {/* Title */}
+        <Text material={textMaterial} fontSize={0.25} anchorX="center" anchorY="top" position={[0, DISPLAY_HEIGHT * 0.4, 0.01]}>
+          VEHICLE IoT GATEWAY
+        </Text>
+        {/* Time */}
+        <Text material={valueMaterial} fontSize={0.18} anchorX="right" anchorY="top" position={[DISPLAY_WIDTH * 0.45, DISPLAY_HEIGHT * 0.4, 0.01]}>
+          {timeString}
+        </Text>
+        {/* Strength Bars */}
+        <StrengthBar y={DISPLAY_HEIGHT * 0.1} label="CELL" strength={strengths.cell} />
+        <StrengthBar y={-DISPLAY_HEIGHT * 0.05} label="GPS" strength={strengths.gps} />
+        <StrengthBar y={-DISPLAY_HEIGHT * 0.2} label="WIFI" strength={strengths.wifi} />
+        <StrengthBar y={-DISPLAY_HEIGHT * 0.35} label="VEHICLE" strength={strengths.vehicle} />
+        {/* Status */}
+        <Text material={statusMaterial} fontSize={0.2} anchorX="center" anchorY="bottom" position={[0, -DISPLAY_HEIGHT * 0.45, 0.01]}>
+          ● ONLINE
+        </Text>
+      </group>
+    </group>
+  );
+});
+StatusDisplay.displayName = 'StatusDisplay';
+
+// Card Slot Component
+const CardSlot = React.memo(({ position, rotation, size, label, materials, isDarkMode }: {
+    position: [number, number, number];
+    rotation: [number, number, number];
+    size: { x: number, y: number, z: number };
+    label: string;
+    materials: ReturnType<typeof useGatewayMaterials>;
+    isDarkMode: boolean;
+}) => (
+    <group position={position} rotation={rotation}>
+        <mesh material={materials.connectorMaterial}>
+            <boxGeometry args={[size.x, size.y, size.z]} />
+        </mesh>
+        <Text
+            color={isDarkMode ? '#ccddee' : '#335544'}
+            fontSize={0.3}
+            position={[0, size.y * 1.5, 0.1]} // Adjust label position
+            rotation={[0, 0, -Math.PI / 2]} // Rotate label to be readable
+            anchorX="center"
+            anchorY="middle"
+        >
+            {label}
+        </Text>
+    </group>
+));
+CardSlot.displayName = 'CardSlot';
+
+// Vehicle Power Component
+const VehiclePower = React.memo(({ position, materials, isDarkMode }: {
+    position: [number, number, number];
+    materials: ReturnType<typeof useGatewayMaterials>;
+    isDarkMode: boolean;
+}) => (
+    <group position={position}>
+        {/* Housing */}
+        <mesh material={materials.vehiclePowerMaterial} rotation-x={Math.PI / 2} position-x={-POWER_HOUSING_LENGTH / 2}>
+            <cylinderGeometry args={[POWER_HOUSING_RADIUS, POWER_HOUSING_RADIUS, POWER_HOUSING_LENGTH, 16]} />
+        </mesh>
+        {/* Tip */}
+        <mesh material={materials.connectorMaterial} rotation-x={Math.PI / 2} position-x={-POWER_HOUSING_LENGTH - POWER_TIP_LENGTH / 2}>
+            <cylinderGeometry args={[POWER_TIP_RADIUS, POWER_TIP_RADIUS * 1.1, POWER_TIP_LENGTH, 16]} />
+        </mesh>
+        {/* Cable */}
+        <mesh material={materials.vehiclePowerMaterial} rotation-z={Math.PI / 2} position-x={-POWER_HOUSING_LENGTH - POWER_TIP_LENGTH - POWER_CABLE_LENGTH / 2}>
+            <cylinderGeometry args={[POWER_CABLE_RADIUS, POWER_CABLE_RADIUS, POWER_CABLE_LENGTH, 8]} />
+        </mesh>
+        {/* Label */}
+        <Text
+            color={isDarkMode ? '#ccddee' : '#335544'}
+            fontSize={0.4}
+            position={[-POWER_HOUSING_LENGTH / 2, POWER_HOUSING_RADIUS + 0.3, 0]} // Position above housing
+            rotation={[0, Math.PI / 2, 0]} // Orient label
+            anchorX="center"
+            anchorY="middle"
+        >
+            12-24V
+        </Text>
+    </group>
+));
+VehiclePower.displayName = 'VehiclePower';
+
+// Antenna Port Component
+const AntennaPort = React.memo(({ position, label, materials, isDarkMode }: {
+    position: [number, number, number];
+    label: string;
+    materials: ReturnType<typeof useGatewayMaterials>;
+    isDarkMode: boolean;
+}) => (
+    <group position={position}>
+        {/* Base */}
+        <mesh material={materials.connectorMaterial} rotation-x={Math.PI / 2}>
+            <cylinderGeometry args={[ANTENNA_PORT_BASE_RADIUS, ANTENNA_PORT_BASE_RADIUS, 0.2, 16]} />
+        </mesh>
+        {/* Connector */}
+        <mesh material={materials.vehiclePowerMaterial} rotation-x={Math.PI / 2} position-z={-0.2}>
+            <cylinderGeometry args={[ANTENNA_PORT_CONNECTOR_RADIUS, ANTENNA_PORT_CONNECTOR_RADIUS * 1.2, 0.3, 16]} />
+        </mesh>
+        {/* Label */}
+        <Text
+            color={isDarkMode ? '#ccddee' : '#335544'}
+            fontSize={0.25}
+            position={[0, ANTENNA_PORT_BASE_RADIUS + 0.2, 0]} // Position above port
+            rotation={[-Math.PI / 2, 0, 0]} // Orient label
+            anchorX="center"
+            anchorY="middle"
+        >
+            {label}
+        </Text>
+    </group>
+));
+AntennaPort.displayName = 'AntennaPort';
+
+// Status LED Component
+const StatusLED = React.memo(({ position, material }: { position: [number, number, number], material: THREE.MeshStandardMaterial }) => { // Changed Material to MeshStandardMaterial
+    const lightRef = useRef<THREE.PointLight>(null);
+    useFrame(({ clock }) => {
+        if (lightRef.current) {
+            lightRef.current.intensity = 0.5 + Math.sin(clock.elapsedTime * 5) * 0.3; // Pulsing effect
+        }
+    });
+    return (
+        <mesh material={material} position={position} rotation-x={Math.PI / 2}>
+            <cylinderGeometry args={[LED_RADIUS, LED_RADIUS, LED_HEIGHT, 16]} />
+            {/* Access emissive color safely now */}
+            <pointLight ref={lightRef} color={material.emissive} intensity={0.8} distance={1.5} />
+        </mesh>
+    );
+});
+StatusLED.displayName = 'StatusLED';
+
+// --- Main Component ---
+export default function VehicleIoTGateway({ isDarkMode = true }: VehicleIoTGatewayProps) {
+  const gatewayGroupRef = useRef<THREE.Group>(null);
+  const materials = useGatewayMaterials(isDarkMode);
+
+  // Antenna configurations
+  const antennas = [
+    { x: -LENGTH / 4 - 1, z: 0, height: 2.5, label: "CELL", color: new THREE.Color(0x00aaff), interval: 1500 + Math.random() * 1000 },
+    { x: -LENGTH / 4, z: -DEVICE_WIDTH / 6, height: 2.0, label: "GPS", color: new THREE.Color(0xffaa00), interval: 1800 + Math.random() * 1000 },
+    { x: -LENGTH / 4, z: DEVICE_WIDTH / 6, height: 1.5, label: "WIFI", color: new THREE.Color(0x00ff88), interval: 1200 + Math.random() * 1000 },
+    { x: -LENGTH / 4 + 1, z: 0, height: 1.8, label: "BT/ZB", color: new THREE.Color(0x8844ff), interval: 2000 + Math.random() * 1000 },
+  ];
+
+  return (
+    <group ref={gatewayGroupRef} dispose={null} rotation-y={Math.PI / 4}>
+
+      {/* Main Body using RoundedBox */}
+      <RoundedBox
+        args={[LENGTH, DEVICE_HEIGHT, DEVICE_WIDTH]} // width, height, depth
+        radius={EDGE_RADIUS} // corner radius
+        smoothness={4} // subdivisions
+        material={materials.mainBodyMaterial}
+        castShadow
+        receiveShadow
+      />
+
+      {/* Shock Absorbers */}
+      <ShockAbsorber position={[HALF_LENGTH - EDGE_RADIUS, -HALF_HEIGHT, HALF_WIDTH - EDGE_RADIUS]} materials={materials} />
+      <ShockAbsorber position={[HALF_LENGTH - EDGE_RADIUS, -HALF_HEIGHT, -HALF_WIDTH + EDGE_RADIUS]} materials={materials} />
+      <ShockAbsorber position={[-HALF_LENGTH + EDGE_RADIUS, -HALF_HEIGHT, HALF_WIDTH - EDGE_RADIUS]} materials={materials} />
+      <ShockAbsorber position={[-HALF_LENGTH + EDGE_RADIUS, -HALF_HEIGHT, -HALF_WIDTH + EDGE_RADIUS]} materials={materials} />
+
+      {/* Antenna Section */}
+      <group>
+        {/* Housing Platform */}
+        <mesh
+          material={materials.antennaBaseMaterial}
+          position={[-LENGTH / 4, HALF_HEIGHT + ANTENNA_HOUSING_SIZE.y / 2, 0]}
+        >
+          <boxGeometry args={[ANTENNA_HOUSING_SIZE.x, ANTENNA_HOUSING_SIZE.y, ANTENNA_HOUSING_SIZE.z]} />
+        </mesh>
+        {/* Antennas */}
+        {antennas.map((ant, index) => (
+          <Antenna
+            key={index}
+            position={[ant.x, HALF_HEIGHT + ANTENNA_HOUSING_SIZE.y, ant.z]}
+            antennaHeight={ant.height}
+            label={ant.label}
+            waveColor={ant.color}
+            materials={materials}
+            isDarkMode={isDarkMode}
+            waveInterval={ant.interval}
+          />
+        ))}
+      </group>
+
+      {/* Status Display */}
+      <StatusDisplay
+        position={[HALF_LENGTH + 0.01, 0, 0]}
+        rotation={[0, Math.PI / 2, 0]}
+        materials={materials}
+        isDarkMode={isDarkMode}
+      />
+
+      {/* Card Slots */}
+      <group>
+        <CardSlot
+            position={[-HALF_LENGTH + 1.5, 0.5, HALF_WIDTH + 0.01]}
+            rotation={[0, Math.PI / 2, Math.PI / 2]}
+            size={SIM_SLOT_SIZE}
+            label="SIM"
+            materials={materials}
+            isDarkMode={isDarkMode}
+        />
+         <CardSlot
+            position={[-HALF_LENGTH + 1.5, -0.5, HALF_WIDTH + 0.01]}
+            rotation={[0, Math.PI / 2, Math.PI / 2]}
+            size={SD_SLOT_SIZE}
+            label="SD"
+            materials={materials}
+            isDarkMode={isDarkMode}
+        />
+      </group>
+
+      {/* Vehicle Power */}
+      <VehiclePower
+        position={[-HALF_LENGTH - 0.5, 0, -HALF_WIDTH / 2]} // Adjusted position slightly
+        materials={materials}
+        isDarkMode={isDarkMode}
+      />
+
+      {/* Antenna Ports (Back Side) */}
+      <group position-z={-HALF_WIDTH - 0.01}>
+        <AntennaPort position={[-LENGTH / 4, HALF_HEIGHT - 0.2, 0]} label="ANT1" materials={materials} isDarkMode={isDarkMode} />
+        <AntennaPort position={[0, HALF_HEIGHT - 0.2, 0]} label="ANT2" materials={materials} isDarkMode={isDarkMode} />
+        <AntennaPort position={[LENGTH / 4, HALF_HEIGHT - 0.2, 0]} label="ANT3" materials={materials} isDarkMode={isDarkMode} />
+      </group>
+
+      {/* Mounting Bracket */}
+      <group>
+        {/* Base */}
+        <mesh material={materials.mountingMaterial} position-y={-HALF_HEIGHT - MOUNT_BRACKET_BASE_SIZE.y / 2}>
+          <boxGeometry args={[MOUNT_BRACKET_BASE_SIZE.x, MOUNT_BRACKET_BASE_SIZE.y, MOUNT_BRACKET_BASE_SIZE.z]} />
+        </mesh>
+        {/* Sides */}
+        <mesh material={materials.mountingMaterial} position={[ (MOUNT_BRACKET_BASE_SIZE.x / 2 - MOUNT_BRACKET_SIDE_SIZE.x / 2), -HALF_HEIGHT - MOUNT_BRACKET_BASE_SIZE.y - MOUNT_BRACKET_SIDE_SIZE.y / 2, 0]}>
+          <boxGeometry args={[MOUNT_BRACKET_SIDE_SIZE.x, MOUNT_BRACKET_SIDE_SIZE.y, MOUNT_BRACKET_SIDE_SIZE.z]} />
+        </mesh>
+        <mesh material={materials.mountingMaterial} position={[-(MOUNT_BRACKET_BASE_SIZE.x / 2 - MOUNT_BRACKET_SIDE_SIZE.x / 2), -HALF_HEIGHT - MOUNT_BRACKET_BASE_SIZE.y - MOUNT_BRACKET_SIDE_SIZE.y / 2, 0]}>
+          <boxGeometry args={[MOUNT_BRACKET_SIDE_SIZE.x, MOUNT_BRACKET_SIDE_SIZE.y, MOUNT_BRACKET_SIDE_SIZE.z]} />
+        </mesh>
+        {/* Holes */}
+        {[1, -1].map(sideX =>
+            [1, -1].map(sideZ => (
+                <mesh key={`${sideX}-${sideZ}`} material={materials.mountHole} position={[sideX * (MOUNT_BRACKET_BASE_SIZE.x / 2 - MOUNT_BRACKET_SIDE_SIZE.x / 2), -HALF_HEIGHT - MOUNT_BRACKET_BASE_SIZE.y - MOUNT_BRACKET_SIDE_SIZE.y, sideZ * (DEVICE_WIDTH / 3)]} rotation-x={Math.PI / 2}>
+                    <cylinderGeometry args={[MOUNT_HOLE_RADIUS, MOUNT_HOLE_RADIUS, MOUNT_BRACKET_SIDE_SIZE.y + 0.1, 16]} />
+                </mesh>
+            ))
+        )}
+      </group>
+
+      {/* Status LEDs (Top Surface) */}
+      <group position-z={HALF_WIDTH - 0.5}>
+        <StatusLED position={[HALF_LENGTH - 1, HALF_HEIGHT + LED_HEIGHT / 2, 0]} material={materials.ledGreen} />
+        <StatusLED position={[HALF_LENGTH - 2, HALF_HEIGHT + LED_HEIGHT / 2, 0]} material={materials.ledBlue} />
+        <StatusLED position={[HALF_LENGTH - 3, HALF_HEIGHT + LED_HEIGHT / 2, 0]} material={materials.ledRed} />
+        <StatusLED position={[HALF_LENGTH - 4, HALF_HEIGHT + LED_HEIGHT / 2, 0]} material={materials.ledYellow} />
+      </group>
+
+    </group>
   );
 }

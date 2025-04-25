@@ -1,370 +1,261 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import React, { useRef, useMemo } from 'react';
 import * as THREE from 'three';
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import { useFrame } from '@react-three/fiber';
+import { Text } from '@react-three/drei'; // For easier text rendering
 
 type EnvSensorProps = {
   isDarkMode?: boolean;
-  width?: number;
-  height?: number;
 }
 
-export default function EnvSensor({ isDarkMode = false, width = 500, height = 400 }: EnvSensorProps) {
-  const mountRef = useRef<HTMLDivElement>(null);
+// Define a type for signal ring data used in useFrame
+interface SignalRingData {
+  mesh: THREE.Mesh | null; // Allow null initially
+  initialY: number;
+  speed: number;
+}
 
-  useEffect(() => {
-    if (!mountRef.current) return;
-
-    let animationFrameId: number;
-    const currentMount = mountRef.current;
-
-    // Create scene
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(isDarkMode ? 0x111111 : 0xffffff);
-
-    // Create camera
-    const camera = new THREE.PerspectiveCamera(75, width / height, 0.1, 1000);
-    camera.position.set(5, 3, 5);
-
-    // Create renderer
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(width, height);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    renderer.shadowMap.enabled = true;
-    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-    currentMount.appendChild(renderer.domElement);
-
-    // Add orbit controls
-    const controls = new OrbitControls(camera, renderer.domElement);
-    controls.enableDamping = true;
-    controls.dampingFactor = 0.05;
-    controls.minDistance = 2;
-    controls.maxDistance = 15;
-
-    // Create sensor device group
-    const sensorNode = new THREE.Group();
-
-    // Create PCB - small and clean for IoT mesh visualization
-    const pcbGeometry = new THREE.BoxGeometry(1.5, 0.1, 1.5);
-    const pcbMaterial = new THREE.MeshStandardMaterial({
+// Material hook
+const useEnvSensorMaterials = (isDarkMode: boolean) => {
+  return useMemo(() => ({
+    pcbMaterial: new THREE.MeshStandardMaterial({
       color: 0x006633, // PCB green
       roughness: 0.7,
-      metalness: 0.3
-    });
-    const pcb = new THREE.Mesh(pcbGeometry, pcbMaterial);
-    pcb.castShadow = true;
-    pcb.receiveShadow = true;
-    sensorNode.add(pcb);
-
-    // Add circuit traces on PCB
-    const addCircuitTrace = (x: number, z: number, traceWidth: number, length: number, rotation = 0) => {
-      const traceGeometry = new THREE.BoxGeometry(traceWidth, 0.01, length);
-      const traceMaterial = new THREE.MeshStandardMaterial({
-        color: 0xCFB53B, // Gold color
-        roughness: 0.2,
-        metalness: 0.8,
-        emissive: isDarkMode ? 0x332200 : 0x000000,
-        emissiveIntensity: isDarkMode ? 0.2 : 0
-      });
-      const trace = new THREE.Mesh(traceGeometry, traceMaterial);
-      trace.position.set(x, 0.06, z);
-      trace.rotation.y = rotation;
-      pcb.add(trace);
-    };
-
-    // Create simplified circuit pattern
-    addCircuitTrace(0, 0, 0.05, 1.4);
-    addCircuitTrace(0.3, 0, 0.05, 1.4);
-    addCircuitTrace(-0.3, 0, 0.05, 1.4);
-    addCircuitTrace(0, 0.3, 1.4, 0.05);
-    addCircuitTrace(0, -0.3, 1.4, 0.05);
-
-    // Main chip (simplified)
-    const chipGeometry = new THREE.BoxGeometry(0.8, 0.1, 0.8);
-    const chipMaterial = new THREE.MeshStandardMaterial({
+      metalness: 0.3,
+      name: 'pcb'
+    }),
+    traceMaterial: new THREE.MeshStandardMaterial({
+      color: 0xCFB53B, // Gold color
+      roughness: 0.2,
+      metalness: 0.8,
+      emissive: isDarkMode ? 0x332200 : 0x000000,
+      emissiveIntensity: isDarkMode ? 0.2 : 0,
+      name: 'trace'
+    }),
+    chipMaterial: new THREE.MeshStandardMaterial({
       color: 0x111111,
       roughness: 0.5,
-      metalness: 0.5
-    });
-    const chip = new THREE.Mesh(chipGeometry, chipMaterial);
-    chip.position.y = 0.15;
-    chip.castShadow = true;
-    sensorNode.add(chip);
-
-    // Add ECOSENSE label on chip
-    const createLabel = () => {
-      const canvas = document.createElement('canvas');
-      canvas.width = 128;
-      canvas.height = 128;
-      const ctx = canvas.getContext('2d');
-
-      if (ctx) {
-        ctx.fillStyle = 'white';
-        ctx.font = '14px monospace';
-        ctx.textAlign = 'center';
-        ctx.fillText('ECOSENSE', 64, 50);
-        ctx.fillText('T2', 64, 70);
-
-        const texture = new THREE.CanvasTexture(canvas);
-        const material = new THREE.MeshBasicMaterial({
-          map: texture,
-          transparent: true
-        });
-
-        const geometry = new THREE.PlaneGeometry(0.6, 0.6);
-        const label = new THREE.Mesh(geometry, material);
-        label.rotation.x = -Math.PI / 2;
-        label.position.y = 0.051;
-        return label;
-      }
-
-      return null;
-    };
-
-    const chipLabel = createLabel();
-    if (chipLabel) chip.add(chipLabel);
-
-    // Add a small antenna (important for IoT visualization)
-    const antennaGeometry = new THREE.CylinderGeometry(0.02, 0.02, 0.5, 8);
-    const antennaMaterial = new THREE.MeshStandardMaterial({
+      metalness: 0.5,
+      name: 'chip'
+    }),
+    antennaMaterial: new THREE.MeshStandardMaterial({
       color: 0xCCCCCC,
       metalness: 0.8,
-      roughness: 0.2
-    });
-    const antenna = new THREE.Mesh(antennaGeometry, antennaMaterial);
-    antenna.position.set(0.6, 0.3, 0.6);
-    antenna.castShadow = true;
-    sensorNode.add(antenna);
-
-    // Add antenna top sphere
-    const antennaSphereGeometry = new THREE.SphereGeometry(0.04, 8, 8);
-    const antennaSphere = new THREE.Mesh(antennaSphereGeometry, antennaMaterial);
-    antennaSphere.position.y = 0.25;
-    antenna.add(antennaSphere);
-
-    // Add signal emitter effect around antenna (for visualization)
-    const signalGeometry = new THREE.RingGeometry(0.1, 0.12, 16);
-    const signalMaterial = new THREE.MeshBasicMaterial({
+      roughness: 0.2,
+      name: 'antenna'
+    }),
+    signalMaterial: new THREE.MeshBasicMaterial({
       color: 0x00FFAA,
       transparent: true,
       opacity: 0.7,
-      side: THREE.DoubleSide
-    });
-
-    // Define a type for signal ring with the required userData properties
-    interface SignalRingData {
-      mesh: THREE.Mesh;
-      initialY: number;
-      speed: number;
-    }
-
-    // Create multiple signal rings
-    const signalRings: SignalRingData[] = [];
-    for (let i = 0; i < 3; i++) {
-      const signal = new THREE.Mesh(signalGeometry, signalMaterial.clone());
-
-      // Position and configure the signal ring
-      signal.position.set(0.6, 0.5 + i * 0.2, 0.6);
-      signal.rotation.x = Math.PI / 2;
-      signal.scale.set(1, 1, 1);
-
-      // Store the mesh and the data separately instead of trying to extend the mesh type
-      signalRings.push({
-        mesh: signal,
-        initialY: 0.5 + i * 0.2,
-        speed: 0.01 + i * 0.005
-      });
-
-      scene.add(signal); // Add signal rings directly to the scene
-    }
-
-    // LED indicator
-    const createLED = (x: number, z: number, color: number) => {
-      const ledGeometry = new THREE.BoxGeometry(0.1, 0.05, 0.1);
-      const ledMaterial = new THREE.MeshStandardMaterial({
-        color: color,
-        emissive: color,
-        emissiveIntensity: 0.8,
-        transparent: true,
-        opacity: 0.9
-      });
-      const led = new THREE.Mesh(ledGeometry, ledMaterial);
-      led.position.set(x, 0.125, z);
-      led.castShadow = true;
-
-      // Add subtle point light for glow effect
-      const light = new THREE.PointLight(color, 0.5, 0.5);
-      light.position.set(0, 0.05, 0);
-      led.add(light);
-
-      return { led, material: ledMaterial, light };
-    };
-
-    // Add a status LED
-    const statusLED = createLED(-0.6, -0.6, 0x00FF00);
-    sensorNode.add(statusLED.led);
-
-    // Add connection pads on bottom of PCB
-    const createConnectionPad = (x: number, z: number) => {
-      const padGeometry = new THREE.CylinderGeometry(0.08, 0.08, 0.03, 8);
-      const padMaterial = new THREE.MeshStandardMaterial({
-        color: 0xCCCCCC,
-        metalness: 0.9,
-        roughness: 0.1
-      });
-      const pad = new THREE.Mesh(padGeometry, padMaterial);
-      pad.position.set(x, -0.065, z);
-      pad.rotation.x = Math.PI / 2;
-      return pad;
-    };
-
-    // Add connection pads at corners
-    sensorNode.add(createConnectionPad(0.6, 0.6));
-    sensorNode.add(createConnectionPad(-0.6, 0.6));
-    sensorNode.add(createConnectionPad(0.6, -0.6));
-    sensorNode.add(createConnectionPad(-0.6, -0.6));
-
-    // Add sensor component (cylindrical)
-    const sensorGeometry = new THREE.CylinderGeometry(0.15, 0.15, 0.12, 16);
-    const sensorMaterial = new THREE.MeshStandardMaterial({
+      side: THREE.DoubleSide,
+      name: 'signalRing'
+    }),
+    ledMaterial: new THREE.MeshStandardMaterial({
+      color: 0x00FF00,
+      emissive: 0x00FF00,
+      emissiveIntensity: 0.8, // Base intensity, will be animated
+      transparent: true,
+      opacity: 0.9,
+      name: 'led'
+    }),
+    padMaterial: new THREE.MeshStandardMaterial({
+      color: 0xCCCCCC,
+      metalness: 0.9,
+      roughness: 0.1,
+      name: 'pad'
+    }),
+    sensorMaterial: new THREE.MeshStandardMaterial({
       color: 0x444444,
       roughness: 0.6,
-      metalness: 0.4
-    });
-    const sensor = new THREE.Mesh(sensorGeometry, sensorMaterial);
-    sensor.position.set(0, 0.16, -0.5);
-    sensor.rotation.x = Math.PI / 2;
-    sensor.castShadow = true;
-    sensorNode.add(sensor);
+      metalness: 0.4,
+      name: 'sensorBody'
+    }),
+    sensorHoleMaterial: new THREE.MeshBasicMaterial({ color: 0x222222, name: 'sensorHole' })
+  }), [isDarkMode]);
+};
 
-    // Add sensor mesh - small holes
-    const sensorHoleGeometry = new THREE.CircleGeometry(0.02, 8);
-    const sensorHoleMaterial = new THREE.MeshBasicMaterial({ color: 0x222222 });
+// --- Helper Components ---
 
-    // Create pattern of sensor holes
-    for (let i = -2; i <= 2; i++) {
-      for (let j = -2; j <= 2; j++) {
-        if (Math.abs(i) === 2 && Math.abs(j) === 2) continue; // Skip corners
+function CircuitTrace({ x, z, width, length, rotation, material }: { x: number, z: number, width: number, length: number, rotation?: number, material: THREE.Material }) {
+  return (
+    <mesh material={material} position={[x, 0.005, z]} rotation-y={rotation ?? 0}> {/* Slightly raise trace */} 
+      <boxGeometry args={[width, 0.01, length]} />
+    </mesh>
+  );
+}
 
-        const hole = new THREE.Mesh(sensorHoleGeometry, sensorHoleMaterial);
-        hole.position.set(i * 0.05, 0, j * 0.05);
-        hole.rotation.x = Math.PI / 2;
-        sensor.add(hole);
-      }
+function ConnectionPad({ x, z, material }: { x: number, z: number, material: THREE.Material }) {
+  return (
+    <mesh material={material} position={[x, -0.015, z]} rotation-x={Math.PI / 2}> {/* Position relative to PCB bottom */} 
+      <cylinderGeometry args={[0.08, 0.08, 0.03, 8]} />
+    </mesh>
+  );
+}
+
+function SensorHole({ x, z, material }: { x: number, z: number, material: THREE.Material }) {
+    return (
+        <mesh material={material} position={[x, 0.061, z]} rotation-x={Math.PI / 2}> {/* Position relative to sensor top */} 
+            <circleGeometry args={[0.02, 8]} />
+        </mesh>
+    );
+}
+
+// --- Main Component ---
+
+export default function EnvSensor({ isDarkMode = false }: EnvSensorProps) {
+  const sensorGroupRef = useRef<THREE.Group>(null);
+  const ledRef = useRef<THREE.Mesh>(null);
+  const ledLightRef = useRef<THREE.PointLight>(null);
+
+  // Refs for animated objects
+  const signalRings = useRef<SignalRingData[]>([]);
+
+  // Initialize refs only once
+  useMemo(() => {
+    signalRings.current = Array.from({ length: 3 }).map((_, i) => ({
+      mesh: null, // Will be assigned in JSX
+      initialY: 0.5 + i * 0.2,
+      speed: 0.01 + i * 0.005
+    }));
+  }, []);
+
+  const materials = useEnvSensorMaterials(isDarkMode);
+
+  // Animation logic
+  useFrame((state) => {
+    const time = state.clock.elapsedTime;
+
+    // Gentle hover animation
+    if (sensorGroupRef.current) {
+      sensorGroupRef.current.position.y = Math.sin(time * 0.8) * 0.05;
     }
 
-    // Add the whole sensor to the scene
-    scene.add(sensorNode);
+    // Status LED blink
+    if (ledRef.current && ledLightRef.current) {
+      const intensityFactor = (Math.sin(time * 3) * 0.2 + 0.8);
+      (ledRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = intensityFactor;
+      ledLightRef.current.intensity = intensityFactor * 0.5;
+    }
 
-    // Lighting
-    const ambientLight = new THREE.AmbientLight(isDarkMode ? 0x333333 : 0x666666);
-    scene.add(ambientLight);
+    // Animate signal rings
+    signalRings.current.forEach(ring => {
+      if (!ring.mesh) return;
+      ring.mesh.position.y += ring.speed;
+      const material = ring.mesh.material as THREE.MeshBasicMaterial;
+      const progress = (ring.mesh.position.y - ring.initialY) / 0.5; // Normalize progress
+      material.opacity = Math.max(0, 0.7 * (1 - progress)); // Fade out
+      const scale = 1 + progress * 2;
+      ring.mesh.scale.set(scale, 1, scale);
 
-    const mainLight = new THREE.DirectionalLight(0xffffff, 0.8);
-    mainLight.position.set(3, 5, 2);
-    mainLight.castShadow = true;
-    mainLight.shadow.mapSize.width = 1024;
-    mainLight.shadow.mapSize.height = 1024;
-    mainLight.shadow.camera.near = 0.5;
-    mainLight.shadow.camera.far = 20;
-    mainLight.shadow.camera.left = -5;
-    mainLight.shadow.camera.right = 5;
-    mainLight.shadow.camera.top = 5;
-    mainLight.shadow.camera.bottom = -5;
-    scene.add(mainLight);
-
-    const fillLight = new THREE.DirectionalLight(isDarkMode ? 0x2244FF : 0xFFCC88, 0.3);
-    fillLight.position.set(-2, 3, -2);
-    scene.add(fillLight);
-
-    // Animation loop
-    let time = 0;
-    const animate = () => {
-      time += 0.01;
-
-      // Gentle PCB hover animation
-      sensorNode.position.y = Math.sin(time * 0.8) * 0.05;
-
-      // Status LED blink
-      statusLED.material.emissiveIntensity = (Math.sin(time * 3) * 0.2 + 0.8);
-      statusLED.light.intensity = (Math.sin(time * 3) * 0.2 + 0.8) * 0.5;
-
-      // Animate signal rings
-      signalRings.forEach(ring => {
-        // Move up and fade out
-        ring.mesh.position.y += ring.speed;
-
-        // Cast the material to MeshBasicMaterial to access opacity property
-        const material = ring.mesh.material as THREE.MeshBasicMaterial;
-        material.opacity = 1 - ((ring.mesh.position.y - ring.initialY) / 0.5);
-
-        ring.mesh.scale.x = 1 + ((ring.mesh.position.y - ring.initialY) * 2);
-        ring.mesh.scale.z = 1 + ((ring.mesh.position.y - ring.initialY) * 2);
-
-        // Reset when completely faded
-        if (material.opacity <= 0) {
-          ring.mesh.position.y = ring.initialY;
-          material.opacity = 0.7;
-          ring.mesh.scale.set(1, 1, 1);
-        }
-      });
-
-      controls.update();
-      renderer.render(scene, camera);
-      animationFrameId = requestAnimationFrame(animate);
-    };
-
-    animate();
-
-    // Handle resize (using component props)
-    const handleResize = () => {
-      camera.aspect = width / height;
-      camera.updateProjectionMatrix();
-      renderer.setSize(width, height);
-    };
-    // Initial call to set size correctly
-    handleResize();
-
-    // Note: We don't add a window resize listener here as the component size is controlled by props.
-    // If the parent component resizes and passes new width/height props, this useEffect will re-run.
-
-    // Cleanup
-    return () => {
-      cancelAnimationFrame(animationFrameId);
-
-      if (currentMount && currentMount.contains(renderer.domElement)) {
-        currentMount.removeChild(renderer.domElement);
+      if (material.opacity <= 0) {
+        ring.mesh.position.y = ring.initialY;
+        material.opacity = 0.7;
+        ring.mesh.scale.set(1, 1, 1);
       }
+    });
+  });
 
-      // Dispose resources
-      scene.traverse((object) => {
-        if (object instanceof THREE.Mesh) {
-          object.geometry.dispose();
+  // Precompute positions
+  const tracePositions = useMemo(() => [
+    { x: 0, z: 0, width: 0.05, length: 1.4 },
+    { x: 0.3, z: 0, width: 0.05, length: 1.4 },
+    { x: -0.3, z: 0, width: 0.05, length: 1.4 },
+    { x: 0, z: 0.3, width: 1.4, length: 0.05 },
+    { x: 0, z: -0.3, width: 1.4, length: 0.05 },
+  ], []);
 
-          if (object.material instanceof THREE.Material) {
-            object.material.dispose();
-          } else if (Array.isArray(object.material)) {
-            object.material.forEach(material => material.dispose());
+  const padPositions = useMemo(() => [
+    { x: 0.6, z: 0.6 }, { x: -0.6, z: 0.6 }, { x: 0.6, z: -0.6 }, { x: -0.6, z: -0.6 }
+  ], []);
+
+  const sensorHolePositions = useMemo(() => {
+      const positions = [];
+      for (let i = -2; i <= 2; i++) {
+          for (let j = -2; j <= 2; j++) {
+              if (Math.abs(i) === 2 && Math.abs(j) === 2) continue; // Skip corners
+              positions.push({ x: i * 0.05, z: j * 0.05 });
           }
-        }
-      });
-      // Dispose signal ring materials explicitly as they are MeshBasicMaterial
-      signalRings.forEach(ring => {
-        if (ring.mesh.material instanceof THREE.Material) {
-          ring.mesh.material.dispose();
-        }
-      });
-      if (chipLabel && chipLabel.material instanceof THREE.Material) {
-        chipLabel.material.dispose();
       }
-      if (sensorHoleMaterial instanceof THREE.Material) {
-        sensorHoleMaterial.dispose();
-      }
-    };
-  }, [isDarkMode, width, height]); // Re-run effect if props change
+      return positions;
+  }, []);
 
   return (
-    <div ref={mountRef} style={{ width, height, overflow: 'hidden' }} /> // Added overflow hidden
+    <group ref={sensorGroupRef} dispose={null}>
+      {/* PCB */} 
+      <mesh material={materials.pcbMaterial} castShadow receiveShadow>
+        <boxGeometry args={[1.5, 0.1, 1.5]} />
+
+        {/* Circuit Traces */} 
+        {tracePositions.map((pos, i) => (
+          <CircuitTrace key={`trace-${i}`} {...pos} material={materials.traceMaterial} />
+        ))}
+
+        {/* Main Chip */} 
+        <mesh material={materials.chipMaterial} position-y={0.1} castShadow> {/* Position relative to PCB top */} 
+          <boxGeometry args={[0.8, 0.1, 0.8]} />
+          {/* Chip Label using Drei Text */} 
+          <Text
+            position={[0, 0.051, 0]} // Position relative to chip top
+            rotation-x={-Math.PI / 2}
+            fontSize={0.08}
+            color="white"
+            font="https://fonts.gstatic.com/s/roboto/v27/KFOmCnqEu92Fr1Mu4mxK.woff" // Example font
+            anchorX="center"
+            anchorY="middle"
+            maxWidth={0.7}
+            lineHeight={1.2}
+          >
+            ECOSENSE T2
+          </Text>
+        </mesh>
+
+        {/* Antenna */} 
+        <group position={[0.6, 0.05, 0.6]}> {/* Position relative to PCB top */} 
+          <mesh material={materials.antennaMaterial} position-y={0.25} castShadow> {/* Base of antenna */} 
+            <cylinderGeometry args={[0.02, 0.02, 0.5, 8]} />
+          </mesh>
+          <mesh material={materials.antennaMaterial} position-y={0.5}> {/* Top sphere */} 
+            <sphereGeometry args={[0.04, 8, 8]} />
+          </mesh>
+        </group>
+
+        {/* LED Indicator */} 
+        <mesh ref={ledRef} material={materials.ledMaterial} position={[-0.6, 0.075, -0.6]} castShadow> {/* Position relative to PCB top */} 
+          <boxGeometry args={[0.1, 0.05, 0.1]} />
+          <pointLight ref={ledLightRef} color={0x00FF00} intensity={0.4} distance={0.5} position-y={0.05} />
+        </mesh>
+
+        {/* Connection Pads (Bottom) */} 
+        {padPositions.map((pos, i) => (
+          <ConnectionPad key={`pad-${i}`} {...pos} material={materials.padMaterial} />
+        ))}
+
+        {/* Sensor Component */} 
+        <mesh material={materials.sensorMaterial} position={[0, 0.11, -0.5]} rotation-x={Math.PI / 2} castShadow> {/* Position relative to PCB top */} 
+          <cylinderGeometry args={[0.15, 0.15, 0.12, 16]} />
+           {/* Sensor Mesh Holes */} 
+           {sensorHolePositions.map((pos, i) => (
+               <SensorHole key={`hole-${i}`} {...pos} material={materials.sensorHoleMaterial} />
+           ))}
+        </mesh>
+
+      </mesh> {/* End PCB Mesh */} 
+
+      {/* Signal Emitter Rings (Positioned relative to the main group) */} 
+      {signalRings.current.map((ringData, i) => (
+        <mesh
+          key={`signal-${i}`}
+          ref={el => ringData.mesh = el} // Assign mesh to ref
+          material={materials.signalMaterial}
+          position={[0.6, ringData.initialY, 0.6]} // Initial position relative to group origin
+          rotation-x={Math.PI / 2}
+        >
+          <ringGeometry args={[0.1, 0.12, 16]} />
+        </mesh>
+      ))}
+
+    </group>
   );
 }
