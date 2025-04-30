@@ -236,33 +236,44 @@ export default function AirQualitySensor({ isDarkMode = false }: AirQualitySenso
     useFrame((state) => {
         const time = state.clock.elapsedTime;
 
+        // Check if sensorGroupRef.current exists before accessing position
         if (sensorGroupRef.current) {
             sensorGroupRef.current.position.y = Math.sin(time * 0.8) * 0.05;
         }
 
+        // Check if indicatorRef.current and indicatorLightRef.current exist
         if (indicatorRef.current && indicatorLightRef.current) {
-            const intensityFactor = (Math.sin(time * 2) * 0.2 + 0.8);
-            (indicatorRef.current.material as THREE.MeshStandardMaterial).emissiveIntensity = intensityFactor;
-            indicatorLightRef.current.intensity = intensityFactor * 0.5;
+            const indicatorMaterial = indicatorRef.current.material as THREE.MeshStandardMaterial;
+            // Ensure material is MeshStandardMaterial before accessing emissiveIntensity
+            if (indicatorMaterial && typeof indicatorMaterial.emissiveIntensity !== 'undefined') {
+                const intensityFactor = (Math.sin(time * 2) * 0.2 + 0.8);
+                indicatorMaterial.emissiveIntensity = intensityFactor;
+                indicatorLightRef.current.intensity = intensityFactor * 0.5;
+            }
         }
 
         signalRings.current.forEach(ring => {
+            // Check if ring.mesh exists
             if (!ring.mesh) return;
             ring.mesh.position.y += ring.speed;
             const material = ring.mesh.material as THREE.MeshBasicMaterial;
-            const progress = (ring.mesh.position.y - ring.initialY) / 0.5;
-            material.opacity = Math.max(0, 0.7 * (1 - progress));
-            const scale = 1 + progress * 2;
-            ring.mesh.scale.set(scale, 1, scale);
+            // Check if material exists and is MeshBasicMaterial
+            if (material && typeof material.opacity !== 'undefined') {
+                const progress = (ring.mesh.position.y - ring.initialY) / 0.5;
+                material.opacity = Math.max(0, 0.7 * (1 - progress));
+                const scale = 1 + progress * 2;
+                ring.mesh.scale.set(scale, 1, scale);
 
-            if (material.opacity <= 0) {
-                ring.mesh.position.y = ring.initialY;
-                material.opacity = 0.7;
-                ring.mesh.scale.set(1, 1, 1);
+                if (material.opacity <= 0) {
+                    ring.mesh.position.y = ring.initialY;
+                    material.opacity = 0.7;
+                    ring.mesh.scale.set(1, 1, 1);
+                }
             }
         });
 
         particles.current.forEach(particle => {
+            // Check if particle.mesh exists
             if (!particle.mesh) return;
             particle.angle += particle.speed;
             particle.mesh.position.x = particle.initialX + Math.sin(particle.angle) * 0.05;

@@ -1,17 +1,17 @@
 "use client";
 
 import FivegTower from "../components/5g-tower";
-import AirQualitySensor from "../components/air-quality-sensor";
+// import AirQualitySensor from "../components/air-quality-sensor";
 import BladeServer from "../components/blade-server";
-import EnvSensor from "../components/env-sensor";
-import Laptop from "../components/laptop";
-import MotionSensor from "../components/motion-sensor";
-import MotorActuator from "../components/motor-actuator";
-import ResidentialIotGateway from "../components/residential-iot-gateway";
-import SmartPhone from "../components/smart-phone";
-import Tablet from "../components/tablet";
-import ValveActuator from "../components/valve-actuator";
-import VehicleIotGateway from "../components/vehicle-iot-gateway";
+// import EnvSensor from "../components/env-sensor";
+// import Laptop from "../components/laptop";
+// import MotionSensor from "../components/motion-sensor";
+// import MotorActuator from "../components/motor-actuator";
+// import ResidentialIotGateway from "../components/residential-iot-gateway";
+// import SmartPhone from "../components/smart-phone";
+// import Tablet from "../components/tablet";
+// import ValveActuator from "../components/valve-actuator";
+// import VehicleIotGateway from "../components/vehicle-iot-gateway";
 import { useEffect, useState, Suspense } from "react";
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
@@ -57,6 +57,10 @@ export default function Home() {
         {/* Adjusted camera position - further back */}
         <Canvas shadows camera={{ position: [0, 15, 60], fov: 50 }}>
           <Suspense fallback={null}>
+            {/* Add helpers for debugging */}
+            <axesHelper args={[5]} />
+            <gridHelper args={[50, 50]} />
+
             {/* Add manual lighting */}
             <ambientLight intensity={isDarkMode ? 0.3 : 0.6} />
             <directionalLight
@@ -69,16 +73,16 @@ export default function Home() {
             <directionalLight position={[-10, 10, -5]} intensity={0.5} />
 
             {/* Position each model using groups, removed scale prop */}
-            <group position={modelPositions[0]}>
+            <group position={[0, -28.8, 0]} scale={2}> {/* Centered vertically at origin and scaled */}
               <FivegTower isDarkMode={isDarkMode} />
             </group>
-            <group position={modelPositions[1]}>
+            {/* <group position={modelPositions[1]}>
               <AirQualitySensor isDarkMode={isDarkMode} />
-            </group>
+            </group> */}
             <group position={modelPositions[2]}>
               <BladeServer isDarkMode={isDarkMode} />
             </group>
-            <group position={modelPositions[3]}>
+            {/* <group position={modelPositions[3]}>
               <EnvSensor isDarkMode={isDarkMode} />
             </group>
             <group position={modelPositions[4]}>
@@ -104,7 +108,7 @@ export default function Home() {
             </group>
             <group position={modelPositions[11]}>
               <VehicleIotGateway isDarkMode={isDarkMode} />
-            </group>
+            </group> */}
 
             {/* Optional: Add environment for reflections */}
             <Environment preset={isDarkMode ? "night" : "city"} background={false} />
