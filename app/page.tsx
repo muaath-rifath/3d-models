@@ -5,8 +5,8 @@ import FivegTower from "../components/5g-tower";
 import BladeServer from "../components/blade-server";
 // import EnvSensor from "../components/env-sensor";
 import Laptop from "../components/laptop";
-// import MotionSensor from "../components/motion-sensor";
-// import MotorActuator from "../components/motor-actuator";
+import MotionSensor from "../components/motion-sensor";
+import MotorActuator from "../components/motor-actuator";
 // import ResidentialIotGateway from "../components/residential-iot-gateway";
 // import SmartPhone from "../components/smart-phone";
 // import Tablet from "../components/tablet";
@@ -104,13 +104,13 @@ export default function Home() {
             <group position={modelPositions[4]}>
               <Laptop isDarkMode={isDarkMode} />
             </group>
-            {/* <group position={modelPositions[5]}>
+            <group position={modelPositions[5]} scale={3}>  {/* Increased scale from default to 3x */}
               <MotionSensor isDarkMode={isDarkMode} />
             </group>
-            <group position={modelPositions[6]}>
+            <group position={[20, 0, 10]} scale={0.7}> {/* Changed position and reduced scale */}
               <MotorActuator isDarkMode={isDarkMode} />
             </group>
-            <group position={modelPositions[7]}>
+            {/* <group position={modelPositions[7]}>
               <ResidentialIotGateway isDarkMode={isDarkMode} />
             </group>
             <group position={modelPositions[8]}>
