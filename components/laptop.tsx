@@ -343,7 +343,7 @@ export default function Laptop({ isDarkMode = false, ...props }: LaptopProps) {
     // Y position relative to displayGroup origin (bottom edge is Y=0)
     const dashboardTopY = screenBezel + screenHeight; // Top Y of the screen area within the lid
     // Place camera near the top edge of the dashboard area
-    const punchHoleY = dashboardTopY - punchHoleRadius - 0.1; // Adjusted Y for camera position
+    const punchHoleY = dashboardTopY - punchHoleRadius + 0.5; // Adjusted Y for camera position
 
     const dashboardShape = useMemo(() => {
         const shape = createRoundedRectShape(dashboardWidth, dashboardHeight, screenCornerRadius);
@@ -385,7 +385,10 @@ export default function Laptop({ isDarkMode = false, ...props }: LaptopProps) {
         // Start Y for the top row, relative to displayGroup origin
         // Bottom of usable area: screenBezel + padding
         // Top of usable area (below camera offset): screenBezel + usableHeight - topOffsetForCamera
-        const gridStartY = screenBezel + usableHeight - topOffsetForCamera - widgetHeight / 2;
+        // ADD A SMALL OFFSET TO MOVE WIDGETS UP
+        const verticalOffset = 1; // Adjust this value to control how much to move up
+        const gridStartY = screenBezel + usableHeight - topOffsetForCamera - widgetHeight / 2 + verticalOffset;
+
 
         const positions = [];
         let widgetIndex = 0;
@@ -575,7 +578,7 @@ export default function Laptop({ isDarkMode = false, ...props }: LaptopProps) {
                 <group
                     ref={displayGroupRef}
                     position={[0, pivotY, pivotZ]} // Position at the pivot point
-                    rotation-x={-Math.PI / 4} // Initial open angle (negative X rotation)
+                    rotation-x={-Math.PI / 6} // Initial open angle (negative X rotation)
                 >
                     {/* Laptop Lid Mesh - Origin is center, position relative to display group pivot */}
                     <mesh

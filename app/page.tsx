@@ -1,17 +1,12 @@
 "use client";
 
 import FivegTower from "../components/5g-tower";
-// import AirQualitySensor from "../components/air-quality-sensor";
 import BladeServer from "../components/blade-server";
-// import EnvSensor from "../components/env-sensor";
 import Laptop from "../components/laptop";
 import MotionSensor from "../components/motion-sensor";
 import MotorActuator from "../components/motor-actuator";
-// import ResidentialIotGateway from "../components/residential-iot-gateway";
-// import SmartPhone from "../components/smart-phone";
-// import Tablet from "../components/tablet";
-// import ValveActuator from "../components/valve-actuator";
-// import VehicleIotGateway from "../components/vehicle-iot-gateway";
+import ResidentialIotGateway from "../components/residential-iot-gateway";
+import SmartPhone from "../components/smart-phone";
 import { useEffect, useState, Suspense } from "react";
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -110,13 +105,23 @@ export default function Home() {
             <group position={[20, 0, 10]} scale={0.7}> {/* Changed position and reduced scale */}
               <MotorActuator isDarkMode={isDarkMode} />
             </group>
-            {/* <group position={modelPositions[7]}>
+            {/* Updated positioning for cylindrical IoT Gateway */}
+            <group 
+              position={[0, 7, 25]} 
+              scale={1} 
+              rotation={[0, Math.PI, 0]}
+            >
               <ResidentialIotGateway isDarkMode={isDarkMode} />
             </group>
-            <group position={modelPositions[8]}>
+            {/* Updated position for SmartPhone */}
+            <group 
+              position={[-25, 5, 0]} 
+              scale={1} 
+              rotation={[0, Math.PI/3, 0]}
+            >
               <SmartPhone isDarkMode={isDarkMode} />
             </group>
-            <group position={modelPositions[9]}>
+            {/* <group position={modelPositions[9]}>
               <Tablet isDarkMode={isDarkMode} />
             </group>
             <group position={modelPositions[10]}>
