@@ -4,7 +4,7 @@ import FivegTower from "../components/5g-tower";
 // import AirQualitySensor from "../components/air-quality-sensor";
 import BladeServer from "../components/blade-server";
 // import EnvSensor from "../components/env-sensor";
-// import Laptop from "../components/laptop";
+import Laptop from "../components/laptop";
 // import MotionSensor from "../components/motion-sensor";
 // import MotorActuator from "../components/motor-actuator";
 // import ResidentialIotGateway from "../components/residential-iot-gateway";
@@ -14,7 +14,7 @@ import BladeServer from "../components/blade-server";
 // import VehicleIotGateway from "../components/vehicle-iot-gateway";
 import { useEffect, useState, Suspense } from "react";
 import { Canvas } from '@react-three/fiber';
-import { OrbitControls, Environment } from '@react-three/drei';
+import { OrbitControls } from '@react-three/drei';
 
 export default function Home() {
   const [isDarkMode, setIsDarkMode] = useState(false);
@@ -61,7 +61,10 @@ export default function Home() {
             <axesHelper args={[5]} />
             <gridHelper args={[50, 50]} />
 
-            {/* Add manual lighting */}
+            {/* Background color */}
+            <color attach="background" args={[isDarkMode ? '#111827' : '#f9fafb']} />
+
+            {/* Enhanced lighting setup that doesn't require external files */}
             <ambientLight intensity={isDarkMode ? 0.3 : 0.6} />
             <directionalLight
               position={[10, 10, 5]}
@@ -71,6 +74,19 @@ export default function Home() {
               shadow-mapSize-height={2048}
             />
             <directionalLight position={[-10, 10, -5]} intensity={0.5} />
+            
+            {/* Add a soft hemisphere light to simulate environment lighting */}
+            <hemisphereLight 
+              args={[isDarkMode ? '#334155' : '#e0f2fe', isDarkMode ? '#0f172a' : '#f8fafc', 0.7]} 
+            />
+            
+            {/* Add a subtle point light for extra highlights */}
+            <pointLight 
+              position={[0, 15, 0]} 
+              intensity={0.4} 
+              color={isDarkMode ? '#4ade80' : '#ffffff'} 
+              distance={60}
+            />
 
             {/* Position each model using groups, removed scale prop */}
             <group position={[0, -28.8, 0]} scale={2}> {/* Centered vertically at origin and scaled */}
@@ -84,11 +100,11 @@ export default function Home() {
             </group>
             {/* <group position={modelPositions[3]}>
               <EnvSensor isDarkMode={isDarkMode} />
-            </group>
+            </group> */}
             <group position={modelPositions[4]}>
               <Laptop isDarkMode={isDarkMode} />
             </group>
-            <group position={modelPositions[5]}>
+            {/* <group position={modelPositions[5]}>
               <MotionSensor isDarkMode={isDarkMode} />
             </group>
             <group position={modelPositions[6]}>
@@ -110,8 +126,7 @@ export default function Home() {
               <VehicleIotGateway isDarkMode={isDarkMode} />
             </group> */}
 
-            {/* Optional: Add environment for reflections */}
-            <Environment preset={isDarkMode ? "night" : "city"} background={false} />
+            {/* Remove Environment component that's causing the error */}
 
           </Suspense>
           {/* Add OrbitControls for interaction */}
