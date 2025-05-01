@@ -7,6 +7,7 @@ import MotionSensor from "../components/motion-sensor";
 import MotorActuator from "../components/motor-actuator";
 import ResidentialIotGateway from "../components/residential-iot-gateway";
 import SmartPhone from "../components/smart-phone";
+import Tablet from "../components/tablet"; // Import the Tablet component
 import { useEffect, useState, Suspense } from "react";
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -30,17 +31,17 @@ export default function Home() {
   // Define approximate positions for each model in the scene
   const modelPositions: [number, number, number][] = [
     [0, 0, 0],    // 5G Tower (center)
-    [15, 0, 15],   // Air Quality Sensor (Increased spacing)
+    [15, 0, 15],   // Air Quality Sensor (Increased spacing) - Placeholder
     [-15, 0, 15],  // Blade Server
-    [30, 0, 0],    // Env Sensor
+    [30, 0, 0],    // Env Sensor - Placeholder
     [-30, 0, 0],   // Laptop
     [15, 0, -15],  // Motion Sensor
-    [-15, 0, -15], // Motor Actuator
-    [0, 0, 30],    // Residential IoT Gateway
-    [0, 0, -30],   // Smartphone
+    [20, 0, 10],   // Motor Actuator (Custom position)
+    [0, 7, 25],    // Residential IoT Gateway (Custom position)
+    [-25, 5, 0],   // Smartphone (Custom position)
     [25, 0, -25],  // Tablet (Adjusted)
-    [-25, 0, -25], // Valve Actuator (Adjusted)
-    [0, 0, -45],   // Vehicle IoT Gateway (Adjusted)
+    [-25, 0, -25], // Valve Actuator (Adjusted) - Placeholder
+    [0, 0, -45],   // Vehicle IoT Gateway (Adjusted) - Placeholder
   ];
 
   return (
@@ -121,10 +122,10 @@ export default function Home() {
             >
               <SmartPhone isDarkMode={isDarkMode} />
             </group>
-            {/* <group position={modelPositions[9]}>
+            <group position={modelPositions[9]} scale={1.5}> {/* Add Tablet */}
               <Tablet isDarkMode={isDarkMode} />
             </group>
-            <group position={modelPositions[10]}>
+            {/* <group position={modelPositions[10]}>
               <ValveActuator isDarkMode={isDarkMode} />
             </group>
             <group position={modelPositions[11]}>
