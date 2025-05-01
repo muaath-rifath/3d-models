@@ -87,16 +87,14 @@ const useValveMaterials = (isDarkMode: boolean) => {
 export default function SmartWaterValve({ isDarkMode = false }: SmartWaterValveProps) {
     const valveGroupRef = useRef<THREE.Group>(null);
     const materials = useValveMaterials(isDarkMode);
-    const ledMatRef = useRef<THREE.MeshStandardMaterial>(null);
-    const displayMatRef = useRef<THREE.MeshStandardMaterial>(null);
 
     useFrame((state) => {
         const time = state.clock.elapsedTime;
-        if (ledMatRef.current) {
-            ledMatRef.current.emissiveIntensity = 0.7 + Math.abs(Math.sin(time * 4)) * 0.3;
+        if (materials.ledMaterial) {
+            materials.ledMaterial.emissiveIntensity = 0.7 + Math.abs(Math.sin(time * 4)) * 0.3;
         }
-        if (displayMatRef.current) {
-            displayMatRef.current.emissiveIntensity = 0.9 + Math.sin(time * 2) * 0.1;
+        if (materials.displayMaterial) {
+            materials.displayMaterial.emissiveIntensity = 0.9 + Math.sin(time * 2) * 0.1;
         }
     });
 
@@ -118,14 +116,14 @@ export default function SmartWaterValve({ isDarkMode = false }: SmartWaterValveP
             </mesh>
 
             <mesh
-                material={displayMatRef.current as any}
+                material={materials.displayMaterial}
                 position={[0, VALVE_BODY_RADIUS + HOUSING_SIZE.y / 2, HOUSING_SIZE.z / 2 + 0.01]}
             >
                 <planeGeometry args={[DISPLAY_SIZE.width, DISPLAY_SIZE.height]} />
             </mesh>
 
             <mesh
-                material={ledMatRef.current as any}
+                material={materials.ledMaterial}
                 position={[DISPLAY_SIZE.width / 2 - LED_RADIUS - 0.05, VALVE_BODY_RADIUS + HOUSING_SIZE.y - LED_RADIUS - 0.05, HOUSING_SIZE.z / 2 + 0.01]}
             >
                 <circleGeometry args={[LED_RADIUS, 16]} />

@@ -7,6 +7,7 @@ import MotionSensor from "../components/motion-sensor";
 import MotorActuator from "../components/motor-actuator";
 import ResidentialIotGateway from "../components/residential-iot-gateway";
 import SmartPhone from "../components/smart-phone";
+import ValveActuator from "../components/valve-actuator"; // Import the ValveActuator component
 import Tablet from "../components/tablet"; // Import the Tablet component
 import { useEffect, useState, Suspense } from "react";
 import { Canvas } from '@react-three/fiber';
@@ -125,10 +126,10 @@ export default function Home() {
             <group position={modelPositions[9]} scale={1.5}> {/* Add Tablet */}
               <Tablet isDarkMode={isDarkMode} />
             </group>
-            {/* <group position={modelPositions[10]}>
+            <group position={modelPositions[10]}> {/* Add ValveActuator */}
               <ValveActuator isDarkMode={isDarkMode} />
             </group>
-            <group position={modelPositions[11]}>
+            {/* <group position={modelPositions[11]}>
               <VehicleIotGateway isDarkMode={isDarkMode} />
             </group> */}
 
