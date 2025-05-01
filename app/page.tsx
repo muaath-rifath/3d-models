@@ -1,6 +1,7 @@
 "use client";
 
 import FivegTower from "../components/5g-tower";
+import AirQualitySensor from "../components/air-quality-sensor"; // Import AirQualitySensor
 import BladeServer from "../components/blade-server";
 import Laptop from "../components/laptop";
 import MotionSensor from "../components/motion-sensor";
@@ -90,9 +91,9 @@ export default function Home() {
             <group position={[0, -28.8, 0]} scale={2}> {/* Centered vertically at origin and scaled */}
               <FivegTower isDarkMode={isDarkMode} />
             </group>
-            {/* <group position={modelPositions[1]}>
+            <group position={modelPositions[1]}> {/* Add AirQualitySensor */}
               <AirQualitySensor isDarkMode={isDarkMode} />
-            </group> */}
+            </group>
             <group position={modelPositions[2]}>
               <BladeServer isDarkMode={isDarkMode} />
             </group>
