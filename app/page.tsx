@@ -9,6 +9,7 @@ import ResidentialIotGateway from "../components/residential-iot-gateway";
 import SmartPhone from "../components/smart-phone";
 import ValveActuator from "../components/valve-actuator"; // Import the ValveActuator component
 import Tablet from "../components/tablet"; // Import the Tablet component
+import VehicleIotGateway from "../components/vehicle-iot-gateway"; // Import the VehicleIotGateway component
 import { useEffect, useState, Suspense } from "react";
 import { Canvas } from '@react-three/fiber';
 import { OrbitControls } from '@react-three/drei';
@@ -129,9 +130,9 @@ export default function Home() {
             <group position={modelPositions[10]}> {/* Add ValveActuator */}
               <ValveActuator isDarkMode={isDarkMode} />
             </group>
-            {/* <group position={modelPositions[11]}>
+            <group position={modelPositions[11]}> {/* Add VehicleIotGateway */}
               <VehicleIotGateway isDarkMode={isDarkMode} />
-            </group> */}
+            </group>
 
             {/* Remove Environment component that's causing the error */}
 
